@@ -1,0 +1,7 @@
+jupyterhub.sqlite
+jupyterhub_cookie_secret
+node_modules
+package-lock.json
+package.json
+test.db
+__pycache__

@@ -1,0 +1,19 @@
+version: "3.1"
+
+
+services:
+  jupyterhub:
+    image: jupyterhub/jupyterhub
+    volumes:
+      - .:/srv/jupyterhub
+    ports:
+      - 8000:8000
+
+  kbatch-server:
+    image: tomaugspurger/kbatch-server
+    ports:
+      - 8050:80
+    environment:
+      JUPYTERHUB_API_TOKEN: super-secret
+      JUPYTERHUB_API_URL: http://jupyterhub:8000/hub/api
+      JUPYTERHUB_HOST: http://127.0.0.1:8000
