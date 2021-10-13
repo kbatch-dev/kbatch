@@ -5,3 +5,5 @@ package-lock.json
 package.json
 test.db
 __pycache__
+.env.fish
+

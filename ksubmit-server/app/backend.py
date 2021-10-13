@@ -29,7 +29,7 @@ def make_job(
     cmd: List[str],
     name: str,
     image: str,
-    user: ...,  # either the name or ID...
+    username: ...,  # either the name or ID...
 ) -> V1Job:
     """
     Make a Kubernetes pod specification for a user-submitted job.

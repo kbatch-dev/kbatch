@@ -1,4 +1,5 @@
 import os
+import uuid
 from typing import List, Union,  Optional
 from urllib.parse import quote
 
@@ -9,6 +10,8 @@ from fastapi import FastAPI, APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
+
+from . import backend
 
 # ----------------------------------------------------------------------------
 # Database configuration
@@ -33,6 +36,7 @@ metadata.create_all(engine)
 
 # ----------------------------------------------------------------------------
 # Jupyterhub configuration
+# TODO: make auth pluggable
 
 prefix = os.environ.get('JUPYTERHUB_SERVICE_PREFIX', '/')
 SERVICE_PREFIX = "/services/kbatch"
@@ -43,20 +47,23 @@ auth = jupyterhub.services.auth.HubAuth(
 )
 
 # ----------------------------------------------------------------------------
+# Kubernetes backend configuration
+k8s_api = backend.make_api()
+
+# ----------------------------------------------------------------------------
 # Models
 
 
 class JobIn(BaseModel):
-    user: str
     command: List[str]
     image: str
-    user: str
 
 
 class Job(BaseModel):
     id: int
-    user: str
-    status: str
+    command: List[str]
+    image: str
+    username: str
 
 
 class User(BaseModel):
@@ -76,6 +83,7 @@ async def get_current_user(request: Request) -> User:
     if cookie:
         user = auth.user_for_cookie(cookie)
     elif token:
+        token = token.removeprefix("token ").removeprefix("Token ")
         user = auth.user_for_token(token)
     else:
         user = None
@@ -84,7 +92,8 @@ async def get_current_user(request: Request) -> User:
         return User(**user, authenticated=True)
     else:
         # redirect to login url on failed auth
-        path = quote(request.url.path.removeprefix(SERVICE_PREFIX))
+        # TODO: Figure out how this interacts with --root-path
+        path = quote(request.url.path)
         print("auth.login_url", auth.login_url)
         # redirect isn't quite working in docker yet.
         return User(authenticated=False, redirect_url=auth.login_url + f'?next={path}')
@@ -114,15 +123,30 @@ async def read_jobs(user: User = Depends(get_current_user)):
 
 
 @router.post("/jobs/", response_model=Job)
-async def create_job(job: JobIn):
-    query = jobs.insert().values(user=job.user, status=job.status)
+async def create_job(job: JobIn, user: User = Depends(get_current_user)):
+    query = jobs.insert().values(
+        command=" ".join(job.command),
+        image=job.image,
+        username=user.name
+    )
     last_record_id = await database.execute(query)
-    return {**job.dict(), "id": last_record_id}
+    name = str(uuid.uuid1())
+
+    k8s_job = backend.make_job(
+        cmd=job.command,
+        image=job.image,
+        name=name,  # TODO: accept a name / generate.
+        username=user.name,
+    )
+    resp = await backend.submit_job(k8s_api, k8s_job)
+    print(resp)
+
+    return {**job.dict(), "id": last_record_id, "username": user.name}
 
 
 @router.get("/")
 async def root():
-    return {"message": "Hello Bigger Applications!"}
+    return {"message": "kbatch"}
 
 
 app = FastAPI()
@@ -131,7 +155,7 @@ app.include_router(router, prefix=SERVICE_PREFIX)
 
 @app.get("/")
 async def root():
-    return {"message": "Hello Bigger Applications!"}
+    return {"message": "kbatch"}
 
 
 @app.on_event("startup")
