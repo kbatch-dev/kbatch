@@ -1,0 +1,4 @@
+{
+    "command": ["ls", "-lh"],
+    "image": "alpine"
+}

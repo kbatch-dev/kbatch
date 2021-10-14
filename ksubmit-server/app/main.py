@@ -138,9 +138,11 @@ async def read_jobs(user: User = Depends(get_current_user)):
 
 
 @router.post("/jobs/", response_model=Job)
-async def create_job(job: JobIn, user: User = Depends(get_current_user), k8s_api = Depends(get_k8s_api)):
+async def create_job(job: JobIn, user: User = Depends(get_current_user), k8s_apis = Depends(get_k8s_api)):
     if not user.authenticated:
         return RedirectResponse(user.redirect_url)
+
+    api, batch_api = k8s_apis
 
     query = jobs.insert().values(
         command=" ".join(job.command),
@@ -150,13 +152,13 @@ async def create_job(job: JobIn, user: User = Depends(get_current_user), k8s_api
     last_record_id = await database.execute(query)
     name = str(uuid.uuid1())
 
-    k8s_job = backend.make_job(
+    k8s_job, config_map = backend.make_job(
         cmd=job.command,
         image=job.image,
         name=name,  # TODO: accept a name / generate.
         username=user.name,
     )
-    resp = await backend.submit_job(k8s_api, k8s_job)
+    resp = await backend.submit_job(batch_api, k8s_job)
     print(resp)
 
     return {**job.dict(), "id": last_record_id, "username": user.name}
