@@ -4,6 +4,7 @@ node_modules
 package-lock.json
 package.json
 test.db
+kbatch.db
 __pycache__
 .env.fish
 

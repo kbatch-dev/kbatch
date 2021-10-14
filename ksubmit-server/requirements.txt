@@ -4,6 +4,7 @@ sqlalchemy
 jupyterhub
 uvicorn[standard]
 pydantic[dotenv]
+kubernetes
 
 # testing
 notebook

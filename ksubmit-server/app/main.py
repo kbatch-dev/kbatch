@@ -1,3 +1,4 @@
+import functools
 import shlex
 import uuid
 from typing import List, Union,  Optional
@@ -49,7 +50,9 @@ auth = jupyterhub.services.auth.HubAuth(
 
 # ----------------------------------------------------------------------------
 # Kubernetes backend configuration
-k8s_api = backend.make_api()
+@functools.lru_cache
+def get_k8s_api():
+    return backend.make_api()
 
 # ----------------------------------------------------------------------------
 # Models
@@ -135,7 +138,7 @@ async def read_jobs(user: User = Depends(get_current_user)):
 
 
 @router.post("/jobs/", response_model=Job)
-async def create_job(job: JobIn, user: User = Depends(get_current_user)):
+async def create_job(job: JobIn, user: User = Depends(get_current_user), k8s_api = Depends(get_k8s_api)):
     if not user.authenticated:
         return RedirectResponse(user.redirect_url)
 
