@@ -3,3 +3,7 @@ databases[sqlite]
 sqlalchemy
 jupyterhub
 uvicorn[standard]
+pydantic[dotenv]
+
+# testing
+notebook

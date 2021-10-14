@@ -1,4 +1,4 @@
-import os
+import shlex
 import uuid
 from typing import List, Union,  Optional
 from urllib.parse import quote
@@ -9,14 +9,18 @@ import jupyterhub.services.auth
 from fastapi import FastAPI, APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordBearer
-from pydantic import BaseModel
+from pydantic import BaseModel, BaseSettings
+
 
 from . import backend
+from .config import Settings
+
+
+settings = Settings()
 
 # ----------------------------------------------------------------------------
 # Database configuration
-DATABASE_URL = "sqlite:///./test.db"
-database = databases.Database(DATABASE_URL)
+database = databases.Database(settings.kbatch_database_url)
 metadata = sqlalchemy.MetaData()
 
 jobs = sqlalchemy.Table(
@@ -30,7 +34,7 @@ jobs = sqlalchemy.Table(
 
 
 engine = sqlalchemy.create_engine(
-    DATABASE_URL, connect_args={"check_same_thread": False}
+    settings.kbatch_database_url, connect_args={"check_same_thread": False}
 )
 metadata.create_all(engine)
 
@@ -38,11 +42,8 @@ metadata.create_all(engine)
 # Jupyterhub configuration
 # TODO: make auth pluggable
 
-prefix = os.environ.get('JUPYTERHUB_SERVICE_PREFIX', '/')
-SERVICE_PREFIX = "/services/kbatch"
-
 auth = jupyterhub.services.auth.HubAuth(
-    api_token=os.environ['JUPYTERHUB_API_TOKEN'],
+    api_token=settings.jupyterhub_api_token,
     cache_max_age=60,
 )
 
@@ -80,6 +81,7 @@ class User(BaseModel):
 async def get_current_user(request: Request) -> User:
     cookie = request.cookies.get(auth.cookie_name)
     token = request.headers.get(auth.auth_header_name)
+
     if cookie:
         user = auth.user_for_cookie(cookie)
     elif token:
@@ -103,7 +105,7 @@ async def get_current_user(request: Request) -> User:
 
 router = APIRouter()
 
-@router.get("/jobs/{job_id}", response_model=List[Job])
+@router.get("/jobs/{job_id}", response_model=Job)
 async def read_job(item_id: int, user: User = Depends(get_current_user)):
     if not user.authenticated:
         return RedirectResponse(user.redirect_url)
@@ -119,11 +121,24 @@ async def read_jobs(user: User = Depends(get_current_user)):
         return RedirectResponse(user.redirect_url)
 
     query = jobs.select().where(jobs.c.username == user.name)
-    return await database.fetch_all(query)
+    result = await database.fetch_all(query)
+    result = [
+        {"id": id_,
+         "command": shlex.split(command),
+         "image": image,
+         "username": username,
+         }
+        for (id_, command, image, username) in result
+    ]
+    print(result)
+    return result
 
 
 @router.post("/jobs/", response_model=Job)
 async def create_job(job: JobIn, user: User = Depends(get_current_user)):
+    if not user.authenticated:
+        return RedirectResponse(user.redirect_url)
+
     query = jobs.insert().values(
         command=" ".join(job.command),
         image=job.image,
@@ -150,7 +165,7 @@ async def root():
 
 
 app = FastAPI()
-app.include_router(router, prefix=SERVICE_PREFIX)
+app.include_router(router, prefix=settings.kbatch_service_prefix)
 
 
 @app.get("/")
