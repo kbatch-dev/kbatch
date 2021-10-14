@@ -4,8 +4,11 @@ Build and submit Jobs to Kubernetes.
 This is used only by the kbatch backend. kbatch users do not have access to the Kubernetes API.
 """
 import asyncio
+import functools
+import string
+import escapism
 import uuid
-from typing import List
+from typing import Dict, List
 
 from kubernetes import client
 from kubernetes import config
@@ -23,23 +26,54 @@ from kubernetes.client.models.v1_container import V1Container
 # TODO: figure out how to "upload" files.
 # TODO: get job logs, cache to storage, delete pods
 # TODO: clean up jobs
+SAFE_CHARS = set(string.ascii_lowercase + string.digits)
 
 
 def make_job(
     cmd: List[str],
     name: str,
     image: str,
-    username: ...,  # either the name or ID...
+    username: str,
+    namespace: str = "default",
+    labels: str = None,
+    annotations: Dict[str, str] = None,
 ) -> V1Job:
     """
     Make a Kubernetes pod specification for a user-submitted job.
     """
-    container = V1Container(args=cmd, image=image, name="job")
-    # TODO: verify restarty policy
-    template = V1PodTemplateSpec(
-        spec=V1PodSpec(containers=[container], restart_policy="Never")
+    annotations = annotations or {}
+    annotations.setdefault(
+        "kbatch.jupyter.org/username",
+        username,
     )
-    job_metadata = V1ObjectMeta(name=name)
+
+    labels = labels or {}
+    labels.setdefault(
+        "kbatch.jupyter.org/username",
+        escapism.escape(username, safe=SAFE_CHARS, escape_char="-"),
+    )
+
+    container = V1Container(args=cmd, image=image, name="job")
+
+    pod_metadata = V1ObjectMeta(
+        name=f"name-pod",
+        namespace=namespace,
+        labels=labels,
+        annotations=annotations,
+    )
+
+    # TODO: verify restart policy
+    template = V1PodTemplateSpec(
+        spec=V1PodSpec(containers=[container], restart_policy="Never"),
+        metadata=pod_metadata,
+    )
+
+    job_metadata = V1ObjectMeta(
+        name=name,
+        annotations=annotations,
+        labels=labels,
+        namespace=namespace,
+    )
     job = V1Job(
         api_version="batch/v1",
         kind="Job",
@@ -49,6 +83,7 @@ def make_job(
     return job
 
 
+@functools.lru_cache
 def make_api():
     config.load_config()
     api = client.BatchV1Api()

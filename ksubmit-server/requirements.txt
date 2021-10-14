@@ -5,6 +5,7 @@ jupyterhub
 uvicorn[standard]
 pydantic[dotenv]
 kubernetes
+escapism
 
 # testing
 notebook
