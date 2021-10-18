@@ -75,5 +75,32 @@ class TestKBatch:
         result = response.json()
         assert result.pop("id")
         assert result.pop("username") == USERNAME
+        assert result.pop("name")
+        assert result.pop("script") is None
+
+        assert result == data
+
+    def test_post_script(self):
+
+        script = "ls -lh"
+
+        response = client.get(
+            "/services/kbatch/jobs/", headers={"Authorization": "token abc"}
+        )
+        assert response.status_code == 200
+        assert response.json() == []
+
+        data = {"script": script, "image": "alpine"}
+        response = client.post(
+            "/services/kbatch/jobs/",
+            headers={"Authorization": "token abc"},
+            json=data,
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert result.pop("id")
+        assert result.pop("username") == USERNAME
+        assert result.pop("name")
+        assert result.pop("command") is None
 
         assert result == data

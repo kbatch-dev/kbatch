@@ -27,6 +27,7 @@ from kubernetes.client.models import (
 )
 from kubernetes.client.models.v1_container import V1Container
 
+from .models import Job
 
 # TODO: figure out how to associate with a user. Attach it as a label  or annotation probably.
 # TODO: figure out how to "upload" files.
@@ -38,10 +39,7 @@ SAFE_CHARS = set(string.ascii_lowercase + string.digits)
 
 
 def make_job(
-    cmd: List[str],
-    name: str,
-    image: str,
-    username: str,
+    job: Job,
     namespace: str = "default",
     labels: str = None,
     annotations: Dict[str, str] = None,
@@ -50,6 +48,12 @@ def make_job(
     """
     Make a Kubernetes pod specification for a user-submitted job.
     """
+    username = job.username
+    name = job.name
+    image = job.image
+    cmd = job.command
+    script = job.script
+
     annotations = annotations or {}
     annotations.setdefault(
         "kbatch.jupyter.org/username",
@@ -111,11 +115,14 @@ def make_job(
         labels=labels,
         namespace=namespace,
     )
+    # TODO: use ttlSecondsAfterFinished for cleanup
+    # https://kubernetes.io/docs/concepts/workloads/controllers/job/#ttl-mechanism-for-finished-jobs
+    # requires k8s v1.21 [beta]
     job = V1Job(
         api_version="batch/v1",
         kind="Job",
         metadata=job_metadata,
-        spec=V1JobSpec(template=template, backoff_limit=4),
+        spec=V1JobSpec(template=template, backoff_limit=4, ttl_seconds_after_finished=300),
     )
     return job, config_map
 

@@ -1,7 +1,8 @@
 import functools
+import logging
 import shlex
 import uuid
-from typing import List, Union,  Optional
+from typing import List
 from urllib.parse import quote
 
 import databases
@@ -9,12 +10,19 @@ import sqlalchemy
 import jupyterhub.services.auth
 from fastapi import FastAPI, APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse
-from fastapi.security import OAuth2PasswordBearer
-from pydantic import BaseModel, BaseSettings
 
 
 from . import backend
 from .config import Settings
+from .models import (
+    Job,
+    JobIn,
+    User,
+)
+
+
+logger = logging.getLogger(__name__)
+
 
 
 settings = Settings()
@@ -28,7 +36,9 @@ jobs = sqlalchemy.Table(
     "jobs",
     metadata,
     sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True),
+    sqlalchemy.Column("name", sqlalchemy.String), 
     sqlalchemy.Column("command", sqlalchemy.String), 
+    sqlalchemy.Column("script", sqlalchemy.String), 
     sqlalchemy.Column("image", sqlalchemy.String), 
     sqlalchemy.Column("username", sqlalchemy.String), 
 )
@@ -53,28 +63,6 @@ auth = jupyterhub.services.auth.HubAuth(
 @functools.lru_cache
 def get_k8s_api():
     return backend.make_api()
-
-# ----------------------------------------------------------------------------
-# Models
-
-
-class JobIn(BaseModel):
-    command: List[str]
-    image: str
-
-
-class Job(BaseModel):
-    id: int
-    command: List[str]
-    image: str
-    username: str
-
-
-class User(BaseModel):
-    authenticated: bool
-    redirect_url: Optional[str]
-    name: Optional[str]
-    groups: Optional[List[str]]
 
 
 # ----------------------------------------------------------------------------
@@ -140,28 +128,39 @@ async def read_jobs(user: User = Depends(get_current_user)):
 @router.post("/jobs/", response_model=Job)
 async def create_job(job: JobIn, user: User = Depends(get_current_user), k8s_apis = Depends(get_k8s_api)):
     if not user.authenticated:
+        logger.info("User not authenticated for post.")
         return RedirectResponse(user.redirect_url)
 
     api, batch_api = k8s_apis
 
+    command = job.command
+    if command:
+        # TODO(sqlite): sqlite doesn't support arrays.
+        command = " ".join(command)
+
     query = jobs.insert().values(
-        command=" ".join(job.command),
+        command=command,
         image=job.image,
         username=user.name
     )
     last_record_id = await database.execute(query)
+    logger.info("Created job %d", last_record_id)
     name = str(uuid.uuid1())
+    job = Job(**{**job.dict(), "name": name, "id": last_record_id, "username": user.name})
 
     k8s_job, config_map = backend.make_job(
-        cmd=job.command,
-        image=job.image,
-        name=name,  # TODO: accept a name / generate.
-        username=user.name,
+        job=job
     )
-    resp = await backend.submit_job(batch_api, k8s_job)
-    print(resp)
+    logger.info("Submitting configmap for job %d", job.id)
+    resp = await backend.submit_configmap(api, config_map)
 
-    return {**job.dict(), "id": last_record_id, "username": user.name}
+    logger.debug("resp %s", resp)
+
+    logger.info("Submitting job %d", job.id)
+    resp = await backend.submit_job(batch_api, k8s_job)
+    logger.debug("resp %s", resp)
+
+    return job
 
 
 @router.get("/")
