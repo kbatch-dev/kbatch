@@ -1,11 +1,9 @@
-fastapi
 databases[sqlite]
-sqlalchemy
-jupyterhub
-uvicorn[standard]
-pydantic[dotenv]
-kubernetes
 escapism
-
-# testing
-notebook
+fastapi
+jupyterhub
+kubernetes
+pydantic[dotenv]
+rich
+sqlalchemy
+uvicorn[standard]
