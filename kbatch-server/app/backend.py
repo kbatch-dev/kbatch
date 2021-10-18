@@ -9,7 +9,7 @@ import pathlib
 import string
 import escapism
 import uuid
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional, List, Union
 
 from kubernetes import client
 from kubernetes import config
@@ -24,6 +24,8 @@ from kubernetes.client.models import (
     V1ConfigMap,
     V1ConfigMapVolumeSource,
     V1KeyToPath,
+    V1Toleration,
+    V1ResourceRequirements,
 )
 from kubernetes.client.models.v1_container import V1Container
 
@@ -38,13 +40,32 @@ from .models import Job
 SAFE_CHARS = set(string.ascii_lowercase + string.digits)
 
 
+def parse_toleration(t: str) -> V1Toleration:
+    if t.count("=") == 1 and t.count(":") == 1:
+        key, rest = t.split("=", 1)
+        value, effect = rest.split(":", 1)
+        return V1Toleration(key=key, value=value, effect=effect)
+    else:
+        raise ValueError(
+            f"Invalid toleration {t}. Should be of the form <key>=<value>:<effect>"
+        )
+
+
 def make_job(
     job: Job,
+    *,
     namespace: str = "default",
     labels: str = None,
     annotations: Dict[str, str] = None,
     script: str = None,
-) -> V1Job:
+    cpu_guarantee: Optional[str] = None,
+    cpu_limit: Optional[str] = None,
+    mem_limit: Optional[str] = None,
+    mem_guarantee: Optional[str] = None,
+    extra_resource_limits: Optional[Dict[str, str]] = None,
+    extra_resource_guarantees: Optional[Dict[str, str]] = None,
+    tolerations: Optional[Union[List[str], List[V1Toleration]]] = None,
+) -> Tuple[V1Job, V1ConfigMap]:
     """
     Make a Kubernetes pod specification for a user-submitted job.
     """
@@ -83,6 +104,7 @@ def make_job(
         ),
     )
 
+    # TODO(TOM): figure out interaction between command /entrypoint and args.
     if script:
         kwargs = {
             "command": ["sh", "/code/script"],
@@ -91,8 +113,28 @@ def make_job(
         kwargs = {"args": cmd}
 
     container = V1Container(
-        **kwargs, image=image, name="job", volume_mounts=[script_volume_mount]
+        **kwargs,
+        image=image,
+        name="job",
+        volume_mounts=[script_volume_mount],
+        resources=V1ResourceRequirements(),
     )
+
+    container.resources.requests = {}
+    if cpu_guarantee:
+        container.resources.requests["cpu"] = cpu_guarantee
+    if mem_guarantee:
+        container.resources.requests["memory"] = mem_guarantee
+    if extra_resource_guarantees:
+        container.resources.requests.update(extra_resource_guarantees)
+
+    container.resources.limits = {}
+    if cpu_limit:
+        container.resources.limits["cpu"] = cpu_limit
+    if mem_limit:
+        container.resources.limits["memory"] = mem_limit
+    if extra_resource_limits:
+        container.resources.limits.update(extra_resource_limits)
 
     pod_metadata = V1ObjectMeta(
         name=f"{name}-pod",
@@ -100,11 +142,18 @@ def make_job(
         labels=labels,
         annotations=annotations,
     )
+    if tolerations:
+        tolerations = [
+            parse_toleration(v) if isinstance(v, str) else v for v in tolerations
+        ]
 
     # TODO: verify restart policy
     template = V1PodTemplateSpec(
         spec=V1PodSpec(
-            containers=[container], restart_policy="Never", volumes=[script_volume]
+            containers=[container],
+            restart_policy="Never",
+            volumes=[script_volume],
+            tolerations=tolerations,
         ),
         metadata=pod_metadata,
     )
@@ -115,9 +164,7 @@ def make_job(
         labels=labels,
         namespace=namespace,
     )
-    # TODO: use ttlSecondsAfterFinished for cleanup
-    # https://kubernetes.io/docs/concepts/workloads/controllers/job/#ttl-mechanism-for-finished-jobs
-    # requires k8s v1.21 [beta]
+
     job = V1Job(
         api_version="batch/v1",
         kind="Job",

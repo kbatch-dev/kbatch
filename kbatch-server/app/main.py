@@ -162,7 +162,7 @@ async def create_job(
         **{**job.dict(), "name": job.name, "id": last_record_id, "username": user.name}
     )
 
-    k8s_job, config_map = backend.make_job(job=job)
+    k8s_job, config_map = backend.make_job(job=job, namespace=settings.kbatch_namespace)
     logger.info("Submitting configmap for job %d", job.id)
     resp = await backend.submit_configmap(api, config_map)
 
