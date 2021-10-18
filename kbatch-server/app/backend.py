@@ -49,7 +49,7 @@ def make_job(
     Make a Kubernetes pod specification for a user-submitted job.
     """
     username = job.username
-    name = job.name
+    name = "-".join([job.name, str(job.id)])
     image = job.image
     cmd = job.command
     script = job.script

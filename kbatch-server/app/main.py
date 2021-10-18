@@ -138,6 +138,9 @@ async def create_job(job: JobIn, user: User = Depends(get_current_user), k8s_api
         # TODO(sqlite): sqlite doesn't support arrays.
         command = " ".join(command)
 
+    if job.name is None:
+        job.name = str(uuid.uuid1())
+
     query = jobs.insert().values(
         command=command,
         image=job.image,
@@ -145,8 +148,8 @@ async def create_job(job: JobIn, user: User = Depends(get_current_user), k8s_api
     )
     last_record_id = await database.execute(query)
     logger.info("Created job %d", last_record_id)
-    name = str(uuid.uuid1())
-    job = Job(**{**job.dict(), "name": name, "id": last_record_id, "username": user.name})
+
+    job = Job(**{**job.dict(), "name": job.name, "id": last_record_id, "username": user.name})
 
     k8s_job, config_map = backend.make_job(
         job=job

@@ -1,6 +1,7 @@
 import os
 import pytest
 import requests
+import uuid
 
 from fastapi.testclient import TestClient
 
@@ -50,7 +51,9 @@ class TestKBatch:
         response = client.get("/services/kbatch/jobs/")
         assert response.status_code == 404
 
-        data = {"command": ["ls", "-lh"], "image": "alpine"}
+        job_name = f"test-job-{uuid.uuid1()}"
+
+        data = {"command": ["ls", "-lh"], "image": "alpine", "name": job_name}
         response = client.post(
             "/services/kbatch/jobs/",
             json=data,
@@ -65,7 +68,8 @@ class TestKBatch:
         assert response.status_code == 200
         assert response.json() == []
 
-        data = {"command": ["ls", "-lh"], "image": "alpine"}
+        job_name = f"test-job-{uuid.uuid1()}"
+        data = {"command": ["ls", "-lh"], "image": "alpine", "name": job_name}
         response = client.post(
             "/services/kbatch/jobs/",
             headers={"Authorization": "token abc"},
@@ -75,7 +79,6 @@ class TestKBatch:
         result = response.json()
         assert result.pop("id")
         assert result.pop("username") == USERNAME
-        assert result.pop("name")
         assert result.pop("script") is None
 
         assert result == data
@@ -90,7 +93,8 @@ class TestKBatch:
         assert response.status_code == 200
         assert response.json() == []
 
-        data = {"script": script, "image": "alpine"}
+        job_name = f"test-job-{uuid.uuid1()}"
+        data = {"script": script, "image": "alpine", "name": job_name}
         response = client.post(
             "/services/kbatch/jobs/",
             headers={"Authorization": "token abc"},
@@ -100,7 +104,6 @@ class TestKBatch:
         result = response.json()
         assert result.pop("id")
         assert result.pop("username") == USERNAME
-        assert result.pop("name")
         assert result.pop("command") is None
 
         assert result == data
