@@ -62,7 +62,8 @@ jobs:
           echo ${{ secrets.GITHUB_TOKEN }} | helm registry login ${{ env.REGISTRY }}/${{ env.HELM_NAME }} -u ${{ github.repository_owner }} --password-stdin
       - name: Save chart locally
         run: |
-          helm chart save ./kbatch-server/helm/kbatch-server ${{ env.REGISTRY }}/${{ env.HELM_NAME }}:${{ steps.tag.outputs.tag }}
+          helm package ./kbatch-server/helm/kbatch-server
       - name: Publish chart
         run: |
-          helm chart push ${{ env.REGISTRY }}/${{ env.HELM_NAME }}:${{ steps.tag.outputs.tag }}
+          # TODO: figure out versioning
+          helm push kbatch-server-0.1.0.tgz ${{ env.REGISTRY }}/{{ env.HELM_NAME }}
