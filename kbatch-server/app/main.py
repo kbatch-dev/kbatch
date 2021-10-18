@@ -162,7 +162,15 @@ async def create_job(
         **{**job.dict(), "name": job.name, "id": last_record_id, "username": user.name}
     )
 
-    k8s_job, config_map = backend.make_job(job=job, namespace=settings.kbatch_namespace)
+    k8s_job, config_map = backend.make_job(
+        job=job,
+        namespace=settings.kbatch_namespace,
+        cpu_guarantee=settings.kbatch_job_cpu_guarantee,
+        cpu_limit=settings.kbatch_job_cpu_limit,
+        mem_guarantee=settings.kbatch_job_mem_guarantee,
+        mem_limit=settings.kbatch_job_mem_limit,
+        tolerations=settings.kbatch_job_tolerations,
+    )
     logger.info("Submitting configmap for job %d", job.id)
     resp = await backend.submit_configmap(api, config_map)
 
