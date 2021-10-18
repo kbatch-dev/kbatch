@@ -28,15 +28,15 @@ def mock_hub(mocker):
     )
 
 
-@pytest.fixture(scope="function", autouse=True)
-async def db():
+@pytest.fixture
+async def kbatch_db():
     from app.main import database
 
     await database.execute("DELETE FROM jobs")
     yield
 
 
-@pytest.mark.usefixtures("mock_hub", "db")
+@pytest.mark.usefixtures("mock_hub", "kbatch_db")
 class TestKBatch:
     def test_read_main(self):
         response = client.get("/")
@@ -81,15 +81,7 @@ class TestKBatch:
         assert result == data
 
     def test_post_script(self):
-
         script = "ls -lh"
-
-        response = client.get(
-            "/services/kbatch/jobs/", headers={"Authorization": "token abc"}
-        )
-        assert response.status_code == 200
-        assert response.json() == []
-
         job_name = f"test-job-{uuid.uuid1()}"
         data = {"script": script, "image": "alpine", "name": job_name}
         response = client.post(

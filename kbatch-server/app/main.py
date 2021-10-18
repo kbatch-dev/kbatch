@@ -119,13 +119,14 @@ async def read_jobs(user: User = Depends(get_current_user)):
     result = [
         {
             "id": id_,
-            "command": shlex.split(command),
+            "name": name,
+            "command": shlex.split(command) if command else command,
             "image": image,
+            "script": script,
             "username": username,
         }
-        for (id_, command, image, username) in result
+        for (id_, name, command, script, image, username) in result
     ]
-    print(result)
     return result
 
 
@@ -147,7 +148,13 @@ async def create_job(
     if job.name is None:
         job.name = str(uuid.uuid1())
 
-    query = jobs.insert().values(command=command, image=job.image, username=user.name)
+    query = jobs.insert().values(
+        name=job.name,
+        command=command,
+        script=job.script,
+        image=job.image,
+        username=user.name,
+    )
     last_record_id = await database.execute(query)
     logger.info("Created job %d", last_record_id)
 
