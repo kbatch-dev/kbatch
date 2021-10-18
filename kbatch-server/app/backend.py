@@ -10,7 +10,7 @@ import pathlib
 import string
 import escapism
 import uuid
-from typing import Dict, Tuple, Optional, List, Union, Mapping
+from typing import Dict, Tuple, Optional, List, Union, Mapping, Any
 
 from kubernetes import client
 from kubernetes import config
@@ -57,7 +57,7 @@ def make_job(
     job: Job,
     *,
     namespace: str = "default",
-    labels: str = None,
+    labels: Optional[Mapping[str, str]] = None,
     annotations: Dict[str, str] = None,
     script: str = None,
     cpu_guarantee: Optional[str] = None,
@@ -85,6 +85,8 @@ def make_job(
     )
 
     labels = labels or {}
+    labels = dict(labels)
+
     labels.setdefault(
         "kbatch.jupyter.org/username",
         escapism.escape(username, safe=SAFE_CHARS, escape_char="-"),
@@ -111,6 +113,8 @@ def make_job(
         env = [V1EnvVar(name=k, value=v) for k, v in env.items()]
 
     # TODO(TOM): figure out interaction between command /entrypoint and args.
+    kwargs: Dict[str, Any]
+
     if script:
         kwargs = {
             "command": ["sh", "/code/script"],

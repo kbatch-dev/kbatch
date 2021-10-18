@@ -8,3 +8,19 @@ target-version = ['py39']
 # https://github.com/actions/runner/issues/241
 addopts = '--color=yes'
 
+[tool.mypy]
+warn_unused_configs = true
+exclude = "kbatch-server/(examples|setup.py)"
+
+[[tool.mypy.overrides]]
+module = [
+    "escapism",
+    "sqlalchemy",
+    "jupyterhub",
+    "jupyterhub.services",
+    "jupyterhub.services.auth",
+    "kubernetes",
+    "kubernetes.client",
+    "kubernetes.client.models",
+]
+ignore_missing_imports = true

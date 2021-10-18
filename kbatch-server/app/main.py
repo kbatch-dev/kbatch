@@ -2,7 +2,7 @@ import functools
 import logging
 import shlex
 import uuid
-from typing import List
+from typing import List, Union, Optional
 from urllib.parse import quote
 
 import databases
@@ -89,7 +89,6 @@ async def get_current_user(request: Request) -> User:
         # redirect to login url on failed auth
         # TODO: Figure out how this interacts with --root-path
         path = quote(request.url.path)
-        print("auth.login_url", auth.login_url)
         # redirect isn't quite working in docker yet.
         return User(authenticated=False, redirect_url=auth.login_url + f"?next={path}")
 
@@ -103,6 +102,7 @@ router = APIRouter()
 @router.get("/jobs/{job_id}", response_model=Job)
 async def read_job(item_id: int, user: User = Depends(get_current_user)):
     if not user.authenticated:
+        assert user.redirect_url is not None
         return RedirectResponse(user.redirect_url)
 
     query = jobs.select(id=item_id).where(jobs.c.username == user.name)
@@ -112,6 +112,7 @@ async def read_job(item_id: int, user: User = Depends(get_current_user)):
 @router.get("/jobs/", response_model=List[Job])
 async def read_jobs(user: User = Depends(get_current_user)):
     if not user.authenticated:
+        assert user.redirect_url is not None
         return RedirectResponse(user.redirect_url)
 
     query = jobs.select().where(jobs.c.username == user.name)
@@ -136,11 +137,12 @@ async def create_job(
 ):
     if not user.authenticated:
         logger.info("User not authenticated for post.")
+        assert user.redirect_url is not None
         return RedirectResponse(user.redirect_url)
 
     api, batch_api = k8s_apis
 
-    command = job.command
+    command: Union[Optional[str], Optional[List[str]]] = job.command
     if command:
         # TODO(sqlite): sqlite doesn't support arrays.
         command = " ".join(command)
@@ -158,12 +160,12 @@ async def create_job(
     last_record_id = await database.execute(query)
     logger.info("Created job %d", last_record_id)
 
-    job = Job(
+    job_out = Job(
         **{**job.dict(), "name": job.name, "id": last_record_id, "username": user.name}
     )
 
     k8s_job, config_map = backend.make_job(
-        job=job,
+        job=job_out,
         namespace=settings.kbatch_namespace,
         cpu_guarantee=settings.kbatch_job_cpu_guarantee,
         cpu_limit=settings.kbatch_job_cpu_limit,
@@ -171,16 +173,16 @@ async def create_job(
         mem_limit=settings.kbatch_job_mem_limit,
         tolerations=settings.kbatch_job_tolerations,
     )
-    logger.info("Submitting configmap for job %d", job.id)
+    logger.info("Submitting configmap for job %d", job_out.id)
     resp = await backend.submit_configmap(api, config_map)
 
     logger.debug("resp %s", resp)
 
-    logger.info("Submitting job %d", job.id)
+    logger.info("Submitting job %d", job_out.id)
     resp = await backend.submit_job(batch_api, k8s_job)
     logger.debug("resp %s", resp)
 
-    return job
+    return job_out
 
 
 @router.get("/")
