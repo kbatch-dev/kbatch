@@ -9,7 +9,7 @@ import pathlib
 import string
 import escapism
 import uuid
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 from kubernetes import client
 from kubernetes import config
@@ -95,7 +95,7 @@ def make_job(
     )
 
     pod_metadata = V1ObjectMeta(
-        name=f"name-pod",
+        name=f"{name}-pod",
         namespace=namespace,
         labels=labels,
         annotations=annotations,
@@ -122,7 +122,9 @@ def make_job(
         api_version="batch/v1",
         kind="Job",
         metadata=job_metadata,
-        spec=V1JobSpec(template=template, backoff_limit=4, ttl_seconds_after_finished=300),
+        spec=V1JobSpec(
+            template=template, backoff_limit=4, ttl_seconds_after_finished=300
+        ),
     )
     return job, config_map
 

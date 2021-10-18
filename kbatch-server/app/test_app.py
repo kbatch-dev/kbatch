@@ -1,12 +1,11 @@
-import os
 import pytest
-import requests
 import uuid
 
 from fastapi.testclient import TestClient
 
 from .main import app
 from rich.traceback import install
+
 install(show_locals=True)
 
 
@@ -32,7 +31,7 @@ def mock_hub(mocker):
 @pytest.fixture(scope="function", autouse=True)
 async def db():
     from app.main import database
-   
+
     await database.execute("DELETE FROM jobs")
     yield
 
@@ -46,7 +45,6 @@ class TestKBatch:
         response = client.get("/services/kbatch/")
         assert response.status_code == 200
 
-
     def test_list_jobs_authenticated(self):
         response = client.get("/services/kbatch/jobs/")
         assert response.status_code == 404
@@ -59,7 +57,6 @@ class TestKBatch:
             json=data,
         )
         assert response.status_code == 307
-     
 
     def test_list_jobs(self):
         response = client.get(
