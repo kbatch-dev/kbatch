@@ -66,4 +66,4 @@ jobs:
       - name: Publish chart
         run: |
           # TODO: figure out versioning
-          helm push kbatch-server-0.1.0.tgz https://${{ env.REGISTRY }}/{{ env.HELM_NAME }}
+          helm push kbatch-server-0.1.0.tgz oci://${{ env.REGISTRY }}/{{ env.HELM_NAME }}
