@@ -121,6 +121,7 @@ def make_job(
     )
 
     container.resources.requests = {}
+
     if cpu_guarantee:
         container.resources.requests["cpu"] = cpu_guarantee
     if mem_guarantee:

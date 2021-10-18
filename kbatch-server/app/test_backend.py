@@ -53,3 +53,18 @@ def test_node_tolerations(model_job, toleration):
             key="hub.jupyter.org/dedicated", value="user", effect="NoSchedule"
         )
     ]
+
+
+def test_config_map(model_job):
+    model_job.command = None
+    model_job.script = "papermill intput.ipynb output.ipynb"
+
+    job, config_map = backend.make_job(model_job)
+    assert config_map.data["script"] == model_job.script
+
+    volume = job.spec.template.spec.volumes[0].config_map.items
+    assert volume == [
+        kubernetes.client.V1KeyToPath(
+            **{"key": "script", "mode": None, "path": "script"}
+        )
+    ]
