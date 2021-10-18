@@ -166,7 +166,7 @@ async def create_job(
 
     k8s_job, config_map = backend.make_job(
         job=job_out,
-        namespace=settings.kbatch_namespace,
+        namespace=settings.kbatch_job_namespace,
         cpu_guarantee=settings.kbatch_job_cpu_guarantee,
         cpu_limit=settings.kbatch_job_cpu_limit,
         mem_guarantee=settings.kbatch_job_mem_guarantee,

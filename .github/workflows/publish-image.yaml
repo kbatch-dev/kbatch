@@ -13,6 +13,8 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}-server
+  HELM_NAME: ${{ github.repository_owner }}/charts/${{ github.event.repository.name }}
+  HELM_EXPERIMENTAL_OCI: 1  # enables publishing Helm images to GHCR
 
 jobs:
   build-and-push-image:
@@ -24,6 +26,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+
+      - name: Set the tag
+        id: tag
+        run: |
+          GITHUB_TAG=${GITHUB_REF/refs\/tags\//}
+          echo "::set-output name=tag::${GITHUB_TAG}"
 
       - name: Log in to the Container registry
         uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
@@ -45,3 +53,16 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Install helm
+        uses: Azure/setup-helm@v1
+
+      - name: Login helm
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | helm registry login ${{ env.REGISTRY }}/${{ env.HELM_NAME }} -u ${{ github.repository_owner }} --password-stdin
+      - name: Save chart locally
+        run: |
+          helm chart save ./kbatch-server/helm/kbatch-server ${{ env.REGISTRY }}/${{ env.HELM_NAME }}:${{ steps.tag.outputs.tag }}
+      - name: Publish chart
+        run: |
+          helm chart push ${{ env.REGISTRY }}/${{ env.HELM_NAME }}:${{ steps.tag.outputs.tag }}

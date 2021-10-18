@@ -1,0 +1,49 @@
+app:
+  image:
+    repository: ghcr.io/tomaugspurger/kbatch-server
+    pullPolicy: IfNotPresent
+    tag: ""
+
+  # app config
+  database_url: "sqlite:///kbatch.db"
+  service_prefix: null
+  job_namespace: null
+  job_cpu_guarantee: null
+  job_cpu_limit: null
+  job_mem_guarantee: null
+  job_mem_limit: null
+  jupyterhub_api_token: null
+  jupyterhub_api_url: null
+  jupyterhub_service_prefix: null
+
+  securityContext: {}
+  service:
+    type: ClusterIP
+    port: 80
+    annotations: {}
+
+  deploy:
+    replicaCount: 1
+    podAnnotations: {}
+    imagePullSecrets: []
+    securityContext: {}
+    podSecurityContext: {}
+    resources: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    autoscaling:
+      enabled: false
+
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+nameOverride: ""
+fullnameOverride: ""

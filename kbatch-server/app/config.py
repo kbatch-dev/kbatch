@@ -7,8 +7,8 @@ from pydantic import BaseSettings
 class Settings(BaseSettings):
     kbatch_database_url: str
     kbatch_service_prefix: str = "/services/kbatch"
-    kbatch_namespace: str = "default"
 
+    kbatch_job_namespace: str = "default"
     kbatch_job_cpu_guarantee: Optional[str] = None
     kbatch_job_cpu_limit: Optional[str] = None
     kbatch_job_mem_guarantee: Optional[str] = None
