@@ -4,12 +4,13 @@ Build and submit Jobs to Kubernetes.
 This is used only by the kbatch backend. kbatch users do not have access to the Kubernetes API.
 """
 import asyncio
+import collections.abc
 import functools
 import pathlib
 import string
 import escapism
 import uuid
-from typing import Dict, Tuple, Optional, List, Union
+from typing import Dict, Tuple, Optional, List, Union, Mapping
 
 from kubernetes import client
 from kubernetes import config
@@ -26,8 +27,9 @@ from kubernetes.client.models import (
     V1KeyToPath,
     V1Toleration,
     V1ResourceRequirements,
+    V1EnvVar,
+    V1Container,
 )
-from kubernetes.client.models.v1_container import V1Container
 
 from .models import Job
 
@@ -65,6 +67,7 @@ def make_job(
     extra_resource_limits: Optional[Dict[str, str]] = None,
     extra_resource_guarantees: Optional[Dict[str, str]] = None,
     tolerations: Optional[Union[List[str], List[V1Toleration]]] = None,
+    env: Optional[Union[List[V1EnvVar], Mapping[str, str]]] = None,
 ) -> Tuple[V1Job, V1ConfigMap]:
     """
     Make a Kubernetes pod specification for a user-submitted job.
@@ -104,6 +107,9 @@ def make_job(
         ),
     )
 
+    if isinstance(env, collections.abc.Mapping):
+        env = [V1EnvVar(name=k, value=v) for k, v in env.items()]
+
     # TODO(TOM): figure out interaction between command /entrypoint and args.
     if script:
         kwargs = {
@@ -116,6 +122,7 @@ def make_job(
         **kwargs,
         image=image,
         name="job",
+        env=env,
         volume_mounts=[script_volume_mount],
         resources=V1ResourceRequirements(),
     )

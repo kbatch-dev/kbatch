@@ -36,6 +36,25 @@ def test_resource_limits(model_job):
 
 
 @pytest.mark.parametrize(
+    "env",
+    [
+        {"KEY1": "VALUE1", "KEY2": "VALUE2"},
+        [
+            kubernetes.client.V1EnvVar(name="KEY1", value="VALUE1"),
+            kubernetes.client.V1EnvVar(name="KEY2", value="VALUE2"),
+        ],
+    ],
+)
+def test_env(model_job, env):
+    job, _ = backend.make_job(model_job, env=env)
+    container = job.spec.template.spec.containers[0]
+    assert container.env == [
+        kubernetes.client.V1EnvVar(name="KEY1", value="VALUE1"),
+        kubernetes.client.V1EnvVar(name="KEY2", value="VALUE2"),
+    ]
+
+
+@pytest.mark.parametrize(
     "toleration",
     [
         kubernetes.client.V1Toleration(
