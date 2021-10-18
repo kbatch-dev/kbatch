@@ -8,3 +8,4 @@ kbatch.db
 __pycache__
 .env.fish
 .env
+*.egg-info
