@@ -77,6 +77,7 @@ class TestKBatch:
         assert result.pop("id")
         assert result.pop("username") == USERNAME
         assert result.pop("script") is None
+        assert result.pop("env") is None
 
         assert result == data
 
@@ -94,6 +95,7 @@ class TestKBatch:
         assert result.pop("id")
         assert result.pop("username") == USERNAME
         assert result.pop("command") is None
+        assert result.pop("env") is None
 
         assert result == data
 
