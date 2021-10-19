@@ -1,9 +1,8 @@
-databases[sqlite]
-escapism
-fastapi
+django
+django-environ
+django-rest-framework
 jupyterhub
 kubernetes
-pydantic[dotenv]
-rich
-sqlalchemy
-uvicorn[standard]
+escapism
+gunicorn
+whitenoise

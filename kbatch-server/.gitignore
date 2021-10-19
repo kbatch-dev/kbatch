@@ -10,3 +10,5 @@ __pycache__
 .env
 *.egg-info
 deployment
+db.sqlite3
+staticfiles

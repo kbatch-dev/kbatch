@@ -39,7 +39,7 @@ spec:
               protocol: TCP
           env:
             {{ if .Values.app.database_url }}
-            - name: KBATCH_DATABASE_URL
+            - name: DATABASE_URL
               value: "{{ .Values.app.database_url }}"
             {{ end }}
             {{ if .Values.app.service_prefix }}

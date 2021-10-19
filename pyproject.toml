@@ -1,6 +1,9 @@
 [tool.black]
 line-length = 88
 target-version = ['py39']
+extend-exclude = '''
+django_kbatch_server/migrations/.*.py
+'''
 
 [tool.pytest.ini_options]
 # GitHub Actions make it hard for pytest to conlcude it should use colors, due

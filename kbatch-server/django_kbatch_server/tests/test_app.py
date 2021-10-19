@@ -1,17 +1,13 @@
 import pytest
 import uuid
 
-from fastapi.testclient import TestClient
-
-from .main import app
-from rich.traceback import install
-
-install(show_locals=True)
+from rest_framework.test import APIClient
 
 
-client = TestClient(app)
+client = APIClient()
 
 USERNAME = "taugspurger"
+AUTH_HEADER = {"HTTP_AUTHORIZATION": "token abc"}
 
 
 def authenticate_side_effect(token):
@@ -22,21 +18,14 @@ def authenticate_side_effect(token):
 @pytest.fixture
 def mock_hub(mocker):
     yield mocker.patch(
-        "app.main.auth.user_for_token",
+        "django_kbatch_server.authentication.auth.user_for_token",
         autospec=True,
         side_effect=authenticate_side_effect,
     )
 
 
-@pytest.fixture
-async def kbatch_db():
-    from app.main import database
-
-    await database.execute("DELETE FROM jobs")
-    yield
-
-
-@pytest.mark.usefixtures("mock_hub", "kbatch_db")
+@pytest.mark.usefixtures("mock_hub")
+@pytest.mark.django_db
 class TestKBatch:
     def test_read_main(self):
         response = client.get("/")
@@ -45,39 +34,45 @@ class TestKBatch:
         response = client.get("/services/kbatch/")
         assert response.status_code == 200
 
-    def test_list_jobs_authenticated(self):
+    def test_list_jobs_unauthenticated(self):
         response = client.get("/services/kbatch/jobs/")
-        assert response.status_code == 404
+        assert response.status_code == 401
 
         job_name = f"test-job-{uuid.uuid1()}"
 
         data = {"command": ["ls", "-lh"], "image": "alpine", "name": job_name}
         response = client.post(
             "/services/kbatch/jobs/",
-            json=data,
+            data,
+            format="json",
         )
-        assert response.status_code == 307
+        assert response.status_code == 401
 
     def test_list_jobs(self):
-        response = client.get(
-            "/services/kbatch/jobs/", headers={"Authorization": "token abc"}
-        )
+        response = client.get("/services/kbatch/jobs/", **AUTH_HEADER)
         assert response.status_code == 200
-        assert response.json() == []
+        assert response.json() == {
+            "count": 0,
+            "next": None,
+            "previous": None,
+            "results": [],
+        }
 
         job_name = f"test-job-{uuid.uuid1()}"
         data = {"command": ["ls", "-lh"], "image": "alpine", "name": job_name}
         response = client.post(
             "/services/kbatch/jobs/",
-            headers={"Authorization": "token abc"},
-            json=data,
+            data,
+            format="json",
+            **AUTH_HEADER,
         )
-        assert response.status_code == 200
+        assert response.status_code == 201
         result = response.json()
-        assert result.pop("id")
-        assert result.pop("username") == USERNAME
+        assert result.pop("user") == USERNAME
         assert result.pop("script") is None
         assert result.pop("env") is None
+        url = result.pop("url")
+        assert url.startswith("http://testserver/services/kbatch/jobs/")
 
         assert result == data
 
@@ -87,15 +82,17 @@ class TestKBatch:
         data = {"script": script, "image": "alpine", "name": job_name}
         response = client.post(
             "/services/kbatch/jobs/",
-            headers={"Authorization": "token abc"},
-            json=data,
+            data,
+            format="json",
+            **AUTH_HEADER,
         )
-        assert response.status_code == 200
+        assert response.status_code == 201
         result = response.json()
-        assert result.pop("id")
-        assert result.pop("username") == USERNAME
+        assert result.pop("user") == USERNAME
         assert result.pop("command") is None
         assert result.pop("env") is None
+        url = result.pop("url")
+        assert url.startswith("http://testserver/services/kbatch/jobs/")
 
         assert result == data
 
@@ -110,13 +107,15 @@ class TestKBatch:
         }
         response = client.post(
             "/services/kbatch/jobs/",
-            headers={"Authorization": "token abc"},
-            json=data,
+            data,
+            format="json",
+            **AUTH_HEADER,
         )
-        assert response.status_code == 200
+        assert response.status_code == 201
         result = response.json()
-        assert result.pop("id")
-        assert result.pop("username") == USERNAME
+        assert result.pop("user") == USERNAME
         assert result.pop("command") is None
+        url = result.pop("url")
+        assert url.startswith("http://testserver/services/kbatch/jobs/")
 
         assert result == data

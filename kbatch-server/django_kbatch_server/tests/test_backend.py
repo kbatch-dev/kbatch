@@ -1,14 +1,20 @@
 import pytest
 import kubernetes.client
 
-from . import models
-from . import backend
+from django_kbatch_server import models
+from django_kbatch_server import backend
 
 
 @pytest.fixture
-def model_job():
+def model_user():
+    user = models.User(username="taugspurger")
+    return user
+
+
+@pytest.fixture
+def model_job(model_user):
     return models.Job(
-        id=1, name="name", command=["ls", "-lh"], image="alpine", username="taugspurger"
+        id=1, name="name", command=["ls", "-lh"], image="alpine", user=model_user
     )
 
 

@@ -72,7 +72,7 @@ def make_job(
     """
     Make a Kubernetes pod specification for a user-submitted job.
     """
-    username = job.username
+    username = job.user.username
     name = "-".join([job.name, str(job.id)])
     image = job.image
     cmd = job.command
@@ -91,6 +91,14 @@ def make_job(
         "kbatch.jupyter.org/username",
         escapism.escape(username, safe=SAFE_CHARS, escape_char="-"),
     )
+
+    # TODO: alternative implementation for the script
+    # What if instead of a ConfigMap, we have some kind of init container
+    # that just pulls the script?
+    # The workflow would be
+    # 1. app puts the scrpit in blob storage
+    # 2. init container pulls the script (maybe w/ a SAS token or some such)
+    # This is maybe nicer since the user can refer back to the script they submitted.
 
     config_map = V1ConfigMap(
         data={"script": script},
@@ -196,12 +204,12 @@ def make_api() -> Tuple[client.CoreV1Api, client.BatchV1Api]:
     return api, batch_api
 
 
-async def submit_configmap(api: client.CoreV1Api, config_map: V1ConfigMap):
+def submit_configmap(api: client.CoreV1Api, config_map: V1ConfigMap):
     response = api.create_namespaced_config_map(namespace="default", body=config_map)
     return response
 
 
-async def submit_job(api: client.BatchV1Api, job: V1Job):
+def submit_job(api: client.BatchV1Api, job: V1Job):
     # TODO: maybe make this an async generator of statuses.
     response = api.create_namespaced_job(namespace="default", body=job)
     return response
@@ -221,11 +229,11 @@ async def main():
     )
     api, batch_api = make_api()
     print("submitting configmap")
-    response = await submit_configmap(api, config_map)
+    response = submit_configmap(api, config_map)
     print(response)
 
     print("submitting job")
-    response = await submit_job(batch_api, job)
+    response = submit_job(batch_api, job)
     print(response)
     print("done")
 

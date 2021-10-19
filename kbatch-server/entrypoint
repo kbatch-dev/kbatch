@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# TODO: verify database connect
+set -o errexit
+set -o pipefail
+set -o nounset
+
+python manage.py collectstatic --no-input
+python manage.py migrate
+gunicorn kbatch_server.wsgi --bind  0.0.0.0:8050
+
+exec "@"
