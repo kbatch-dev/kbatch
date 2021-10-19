@@ -172,6 +172,7 @@ async def create_job(
         mem_guarantee=settings.kbatch_job_mem_guarantee,
         mem_limit=settings.kbatch_job_mem_limit,
         tolerations=settings.kbatch_job_tolerations,
+        env=job.env,
     )
     logger.info("Submitting configmap for job %d", job_out.id)
     resp = await backend.submit_configmap(api, config_map)

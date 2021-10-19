@@ -96,3 +96,25 @@ class TestKBatch:
         assert result.pop("command") is None
 
         assert result == data
+
+    def test_post_env(self):
+        script = "echo ${MY_ENV_VAR}"
+        job_name = f"test-job-{uuid.uuid1()}"
+        data = {
+            "script": script,
+            "image": "alpine",
+            "name": job_name,
+            "env": {"MY_ENV_VAR": "FOO"},
+        }
+        response = client.post(
+            "/services/kbatch/jobs/",
+            headers={"Authorization": "token abc"},
+            json=data,
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert result.pop("id")
+        assert result.pop("username") == USERNAME
+        assert result.pop("command") is None
+
+        assert result == data

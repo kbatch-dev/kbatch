@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Dict
 from pydantic import BaseModel
 
 
@@ -7,6 +7,7 @@ class JobIn(BaseModel):
     script: Optional[str]
     image: str
     name: Optional[str]
+    env: Optional[Dict[str, str]]
 
 
 class Job(BaseModel):
@@ -16,6 +17,8 @@ class Job(BaseModel):
     script: Optional[str]
     image: str
     username: str
+    # TODO: figure out if we should return env here
+    env: Optional[Dict[str, str]]
 
 
 class User(BaseModel):
