@@ -38,9 +38,9 @@ jobs:
       - name: Run Tests
         run: |
           cd kbatch-server
-          KBATCH_SETTINGS_PATH=.env.test pytest -v
+          pytest -v
 
       - name: Run mypy
         run: |
-          python -m pip install mypy
+          python -m pip install mypy django-stubs
           mypy kbatch-server

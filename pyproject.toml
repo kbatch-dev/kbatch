@@ -13,7 +13,12 @@ addopts = '--color=yes'
 
 [tool.mypy]
 warn_unused_configs = true
-exclude = "kbatch-server/(examples|setup.py)"
+exclude = "kbatch-server/(examples|setup.py|manage.py|kbatch_server/settings/base.py)"
+plugins = ["mypy_django_plugin.main"]
+
+[tool.django-stubs]
+django_settings_module = "kbatch_server.settings.local"
+
 
 [[tool.mypy.overrides]]
 module = [
@@ -25,5 +30,9 @@ module = [
     "kubernetes",
     "kubernetes.client",
     "kubernetes.client.models",
+    "django.core.wsgi",
+    "rest_framework",
+    "rest_framework.authentication",
+    "rest_framework.test",
 ]
 ignore_missing_imports = true
