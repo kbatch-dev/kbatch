@@ -5,6 +5,7 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
+mkdir -p kbatch_server/static
 python manage.py collectstatic --no-input
 python manage.py migrate
 gunicorn kbatch_server.wsgi --bind  0.0.0.0:8050
