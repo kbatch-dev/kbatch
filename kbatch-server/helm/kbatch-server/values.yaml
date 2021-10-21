@@ -5,7 +5,9 @@ app:
     tag: ""
 
   # app config
-  database_url: "sqlite:///kbatch.db"
+  django_secret_key: null
+  django_settings_module: null
+  database_url: null
   service_prefix: null
   job_namespace: null
   job_cpu_guarantee: null
@@ -14,7 +16,9 @@ app:
   job_mem_limit: null
   jupyterhub_api_token: null
   jupyterhub_api_url: null
+  # Should *not* have a leading "/" and *should* have a trailing "/"
   jupyterhub_service_prefix: null
+  extra_env: {}
 
   securityContext: {}
   service:

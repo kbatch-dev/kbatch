@@ -10,14 +10,15 @@ services:
       - 8000:8000
 
   kbatch-server:
-    build: ..
+    # build: ..
+    image: tomaugspurger/kbatch-server
     volumes:
       - ..:/code
       - .:/config
     ports:
-      - 8050:80
+      - 8050:8050
     environment:
       JUPYTERHUB_API_TOKEN: super-secret
       JUPYTERHUB_API_URL: http://jupyterhub:8000/hub/api
       JUPYTERHUB_HOST: http://127.0.0.1:8000
-      KBATCH_DATABASE_URL: "sqlite:///kbatch.db"
+      DJANGO_SETTINGS_MODULE: kbatch_server.settings.local

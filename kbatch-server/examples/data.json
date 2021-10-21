@@ -1,4 +1,5 @@
 {
     "command": ["ls", "-lh"],
-    "image": "alpine"
+    "image": "alpine",
+    "name": "my-job"
 }

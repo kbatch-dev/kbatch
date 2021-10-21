@@ -1,7 +1,7 @@
 import logging
-
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import RegexValidator
 from django.conf import settings
 
 
@@ -12,13 +12,24 @@ class User(AbstractUser):
     pass
 
 
+name_validator = RegexValidator(
+    # TODO: this xpr was taken from the k8s error, but doesn't seem to validate correctly.
+    # e.g. ABC-123 passes, but fails at k8s.
+    regex=r"[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*",
+    message=(
+        "The 'name' field must be a valid RFC 1123 subdomain. See "
+        "https://datatracker.ietf.org/doc/html/rfc1123/."
+    ),
+)
+
+
 class Job(models.Model):
     command = models.JSONField(
         blank=True, null=True
     )  # TODO: validate that this is a list
     script = models.TextField(blank=True, null=True)
     image = models.TextField()
-    name = models.TextField()
+    name = models.TextField(validators=[name_validator])
     env = models.JSONField(blank=True, null=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
