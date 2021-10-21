@@ -19,6 +19,7 @@ if READ_DOT_ENV_FILE:
 
 
 ALLOWED_HOSTS = env.list(
+    "DJANGO_ALLOWED_HOSTS",
     default=[
         "localhost",
         "0.0.0.0",
