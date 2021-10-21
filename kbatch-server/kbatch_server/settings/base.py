@@ -18,12 +18,13 @@ if READ_DOT_ENV_FILE:
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 
-ALLOWED_HOSTS = [
-    "localhost",
-    "0.0.0.0",
-    "127.0.0.1",
-]
-
+ALLOWED_HOSTS = env.list(
+    default=[
+        "localhost",
+        "0.0.0.0",
+        "127.0.0.1",
+    ],
+)
 
 # Application definition
 
