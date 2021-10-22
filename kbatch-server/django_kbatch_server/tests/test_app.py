@@ -34,7 +34,7 @@ def mock_backend(mocker):
     yield mocker.patch("django_kbatch_server.models.backend")
 
 
-@pytest.mark.usefixtures("mock_hub")
+@pytest.mark.usefixtures("mock_hub", "mock_backend")
 @pytest.mark.django_db
 class TestKBatch:
     def test_read_main(self):
