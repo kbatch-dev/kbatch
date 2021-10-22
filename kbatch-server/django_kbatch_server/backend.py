@@ -10,7 +10,7 @@ import pathlib
 import string
 import escapism
 import uuid
-from typing import Dict, Tuple, Optional, List, Union, Mapping, Any
+from typing import Dict, Optional, List, Union, Mapping
 
 from kubernetes import client
 from kubernetes import config
@@ -22,9 +22,6 @@ from kubernetes.client.models import (
     V1ObjectMeta,
     V1Volume,
     V1VolumeMount,
-    V1ConfigMap,
-    V1ConfigMapVolumeSource,
-    V1KeyToPath,
     V1Toleration,
     V1ResourceRequirements,
     V1EnvVar,
@@ -59,7 +56,6 @@ def make_job(
     namespace: str = "default",
     labels: Optional[Mapping[str, str]] = None,
     annotations: Dict[str, str] = None,
-    script: str = None,
     cpu_guarantee: Optional[str] = None,
     cpu_limit: Optional[str] = None,
     mem_limit: Optional[str] = None,
@@ -68,15 +64,15 @@ def make_job(
     extra_resource_guarantees: Optional[Dict[str, str]] = None,
     tolerations: Optional[Union[List[str], List[V1Toleration]]] = None,
     env: Optional[Union[List[V1EnvVar], Mapping[str, str]]] = None,
-) -> Tuple[V1Job, V1ConfigMap]:
+) -> V1Job:
     """
     Make a Kubernetes pod specification for a user-submitted job.
     """
     username = job.user.username
     name = "-".join([job.name, str(job.id)])
     image = job.image
-    cmd = job.command
-    script = job.script
+    command = job.command
+    args = job.args
 
     annotations = annotations or {}
     annotations.setdefault(
@@ -92,50 +88,22 @@ def make_job(
         escapism.escape(username, safe=SAFE_CHARS, escape_char="-"),
     )
 
-    # TODO: alternative implementation for the script
-    # What if instead of a ConfigMap, we have some kind of init container
-    # that just pulls the script?
-    # The workflow would be
-    # 1. app puts the scrpit in blob storage
-    # 2. init container pulls the script (maybe w/ a SAS token or some such)
-    # This is maybe nicer since the user can refer back to the script they submitted.
-
-    config_map = V1ConfigMap(
-        data={"script": script},
-        metadata=V1ObjectMeta(
-            name=f"{name}-cm",
-            namespace=namespace,
-            labels=labels,
-            annotations=annotations,
-        ),
-    )
-    script_volume_mount = V1VolumeMount(mount_path="/code", name="script-volume")
-    script_volume = V1Volume(
-        name="script-volume",
-        config_map=V1ConfigMapVolumeSource(
-            name=f"{name}-cm", items=[V1KeyToPath(key="script", path="script")]
-        ),
-    )
+    file_volume_mount = V1VolumeMount(mount_path="/code", name="file-volume")
+    file_volume = V1Volume(name="file-volume", empty_dir={})
 
     if isinstance(env, collections.abc.Mapping):
         env = [V1EnvVar(name=k, value=v) for k, v in env.items()]
 
-    # TODO(TOM): figure out interaction between command /entrypoint and args.
-    kwargs: Dict[str, Any]
-
-    if script:
-        kwargs = {
-            "command": ["sh", "/code/script"],
-        }
-    else:
-        kwargs = {"args": cmd}
+    if args is None and command and job.upload:
+        args = [f"/code/{job.upload.file.name}"]
 
     container = V1Container(
-        **kwargs,
+        args=args,
+        command=command,
         image=image,
         name="job",
         env=env,
-        volume_mounts=[script_volume_mount],
+        volume_mounts=[file_volume_mount],
         resources=V1ResourceRequirements(),
     )
 
@@ -167,12 +135,29 @@ def make_job(
             parse_toleration(v) if isinstance(v, str) else v for v in tolerations
         ]
 
+    init_containers = None
+    if job.upload:
+        init_containers = [
+            V1Container(
+                args=[
+                    "wget",
+                    job.upload.file.url,
+                    "-O",
+                    f"/code/{job.upload.file.name}",
+                ],
+                image="inutano/wget:1.20.3-r1",
+                name=f"{name}-init",
+                volume_mounts=[file_volume_mount],
+            )
+        ]
+
     # TODO: verify restart policy
     template = V1PodTemplateSpec(
         spec=V1PodSpec(
+            init_containers=init_containers,
             containers=[container],
             restart_policy="Never",
-            volumes=[script_volume],
+            volumes=[file_volume],
             tolerations=tolerations,
         ),
         metadata=pod_metadata,
@@ -193,20 +178,14 @@ def make_job(
             template=template, backoff_limit=4, ttl_seconds_after_finished=300
         ),
     )
-    return job, config_map
+    return job
 
 
 @functools.lru_cache
-def make_api() -> Tuple[client.CoreV1Api, client.BatchV1Api]:
+def make_api() -> client.BatchV1Api:
     config.load_config()
     batch_api = client.BatchV1Api()
-    api = client.CoreV1Api()
-    return api, batch_api
-
-
-def submit_configmap(api: client.CoreV1Api, config_map: V1ConfigMap):
-    response = api.create_namespaced_config_map(namespace="default", body=config_map)
-    return response
+    return batch_api
 
 
 def submit_job(api: client.BatchV1Api, job: V1Job):
@@ -220,17 +199,14 @@ async def main():
     token = str(uuid.uuid1())
     script = (pathlib.Path(__file__).parent.parent / "examples/script.sh").read_text()
 
-    job, config_map = make_job(
+    job = make_job(
         cmd,
         name=f"pi-{token}",
         image="mcr.microsoft.com/planetary-computer/python:2021.10.01.11",
         username="taugspurger@microsoft.com",
         script=script,
     )
-    api, batch_api = make_api()
-    print("submitting configmap")
-    response = submit_configmap(api, config_map)
-    print(response)
+    batch_api = make_api()
 
     print("submitting job")
     response = submit_job(batch_api, job)

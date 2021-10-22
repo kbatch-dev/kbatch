@@ -5,8 +5,10 @@ from django_kbatch_server.serializers import (
     UserSerializer,
     GroupSerializer,
     JobSerializer,
+    UploadSerializer,
 )
-from django_kbatch_server.models import User, Job
+from django_kbatch_server.models import User, Job, Upload
+from rest_framework.parsers import MultiPartParser, FormParser
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -37,6 +39,24 @@ class JobViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         return Job.objects.filter(user=user).order_by("id")
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class UploadViewSet(viewsets.ModelViewSet):
+    parser_classes = [
+        MultiPartParser,
+        FormParser,
+    ]
+
+    queryset = Upload.objects.all().order_by("id")
+    serializer_class = UploadSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        return Upload.objects.filter(user=user).order_by("id")
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

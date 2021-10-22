@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
 APPS_DIR = BASE_DIR / "kbatch_server"
 env = environ.Env()
 
-READ_DOT_ENV_FILE = env.bool("DJANGO_READ_DOT_ENV_FILE", default=False)
+READ_DOT_ENV_FILE = env.bool("DJANGO_READ_DOT_ENV_FILE", default=True)
 if READ_DOT_ENV_FILE:
     # OS environment variables take precedence over variables from .env
     env.read_env(str(BASE_DIR / ".env"))
@@ -167,3 +167,8 @@ KBATCH_JOB_CPU_LIMIT = env("KBATCH_JOB_CPU_LIMIT", default=None)
 KBATCH_JOB_MEM_GUARANTEE = env("KBATCH_JOB_MEM_GUARANTEE", default=None)
 KBATCH_JOB_MEM_LIMIT = env("KBATCH_JOB_MEM_LIMIT", default=None)
 KBATCH_JOB_TOLERATIONS = env.list("KBATCH_JOB_TOLERATIONS", default=None)
+
+DEFAULT_FILE_STORAGE = env("DEFAULT_FILE_STORAGE")
+AZURE_ACCOUNT_NAME = env("AZURE_ACCOUNT_NAME")
+AZURE_CONTAINER = env("AZURE_CONTAINER")
+AZURE_SAS_TOKEN = env("AZURE_SAS_TOKEN")

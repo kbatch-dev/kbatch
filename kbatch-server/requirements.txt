@@ -6,3 +6,5 @@ kubernetes
 escapism
 gunicorn
 whitenoise
+
+django-storages[azure]  # TODO: configurable...

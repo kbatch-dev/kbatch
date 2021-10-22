@@ -19,7 +19,7 @@ def model_job(model_user):
 
 
 def test_resource_limits(model_job):
-    job, _ = backend.make_job(
+    job = backend.make_job(
         model_job,
         cpu_guarantee="100m",
         cpu_limit="500m",
@@ -52,7 +52,7 @@ def test_resource_limits(model_job):
     ],
 )
 def test_env(model_job, env):
-    job, _ = backend.make_job(model_job, env=env)
+    job = backend.make_job(model_job, env=env)
     container = job.spec.template.spec.containers[0]
     assert container.env == [
         kubernetes.client.V1EnvVar(name="KEY1", value="VALUE1"),
@@ -70,26 +70,11 @@ def test_env(model_job, env):
     ],
 )
 def test_node_tolerations(model_job, toleration):
-    job, _ = backend.make_job(model_job, tolerations=[toleration])
+    job = backend.make_job(model_job, tolerations=[toleration])
     pod = job.spec.template.spec
 
     assert pod.tolerations == [
         kubernetes.client.V1Toleration(
             key="hub.jupyter.org/dedicated", value="user", effect="NoSchedule"
-        )
-    ]
-
-
-def test_config_map(model_job):
-    model_job.command = None
-    model_job.script = "papermill intput.ipynb output.ipynb"
-
-    job, config_map = backend.make_job(model_job)
-    assert config_map.data["script"] == model_job.script
-
-    volume = job.spec.template.spec.volumes[0].config_map.items
-    assert volume == [
-        kubernetes.client.V1KeyToPath(
-            **{"key": "script", "mode": None, "path": "script"}
         )
     ]

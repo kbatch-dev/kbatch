@@ -9,6 +9,7 @@ router = routers.DefaultRouter()
 router.register(r"users", views.UserViewSet)
 router.register(r"groups", views.GroupViewSet)
 router.register(r"jobs", views.JobViewSet)
+router.register(r"uploads", views.UploadViewSet)
 
 urlpatterns = [
     path("", include(router.urls)),

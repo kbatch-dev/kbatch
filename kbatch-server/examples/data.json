@@ -1,5 +1,4 @@
 {
-    "command": ["ls", "-lh"],
-    "image": "alpine",
-    "name": "my-job"
-}
+    "image": "mcr.microsoft.com/planetary-computer/python",
+    "name": "my-job",
+    "command": ["sh"]}

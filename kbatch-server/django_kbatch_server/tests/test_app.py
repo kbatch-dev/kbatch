@@ -1,3 +1,5 @@
+import pathlib
+
 import pytest
 import uuid
 
@@ -44,7 +46,6 @@ class TestKBatch:
         response = client.post(
             "/services/kbatch/jobs/",
             data,
-            format="json",
         )
         assert response.status_code == 401
 
@@ -69,53 +70,70 @@ class TestKBatch:
         assert response.status_code == 201
         result = response.json()
         assert result.pop("user") == USERNAME
-        assert result.pop("script") is None
+        assert result.pop("upload") is None
         assert result.pop("env") is None
         url = result.pop("url")
         assert url.startswith("http://testserver/services/kbatch/jobs/")
 
         assert result == data
 
-    def test_post_script(self):
-        script = "ls -lh"
-        job_name = f"test-job-{uuid.uuid1()}"
-        data = {"script": script, "image": "alpine", "name": job_name}
+    def test_post_file(self, tmp_path: pathlib.Path):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        p = tmp_path / "file.txt"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("ls")
+
+        file = SimpleUploadedFile("file.txt", b"abc", content_type="text/plain")
+
         response = client.post(
             "/services/kbatch/jobs/",
-            data,
-            format="json",
+            {"name": f"test-2-{uuid.uuid1()}", "file": file},
+            format="multipart",
             **AUTH_HEADER,
         )
         assert response.status_code == 201
-        result = response.json()
-        assert result.pop("user") == USERNAME
-        assert result.pop("command") is None
-        assert result.pop("env") is None
-        url = result.pop("url")
-        assert url.startswith("http://testserver/services/kbatch/jobs/")
 
-        assert result == data
+    # def test_post_script(self):
+    #     script = "ls -lh"
+    #     job_name = f"test-job-{uuid.uuid1()}"
+    #     data = {"script": script, "image": "alpine", "name": job_name}
+    #     response = client.post(
+    #         "/services/kbatch/jobs/",
+    #         data,
+    #         format="json",
+    #         **AUTH_HEADER,
+    #     )
+    #     assert response.status_code == 201
+    #     result = response.json()
+    #     assert result.pop("user") == USERNAME
+    #     assert result.pop("command") is None
+    #     assert result.pop("env") is None
+    #     url = result.pop("url")
+    #     assert url.startswith("http://testserver/services/kbatch/jobs/")
 
-    def test_post_env(self):
-        script = "echo ${MY_ENV_VAR}"
-        job_name = f"test-job-{uuid.uuid1()}"
-        data = {
-            "script": script,
-            "image": "alpine",
-            "name": job_name,
-            "env": {"MY_ENV_VAR": "FOO"},
-        }
-        response = client.post(
-            "/services/kbatch/jobs/",
-            data,
-            format="json",
-            **AUTH_HEADER,
-        )
-        assert response.status_code == 201
-        result = response.json()
-        assert result.pop("user") == USERNAME
-        assert result.pop("command") is None
-        url = result.pop("url")
-        assert url.startswith("http://testserver/services/kbatch/jobs/")
+    #     assert result == data
 
-        assert result == data
+    # def test_post_env(self):
+    #     script = "echo ${MY_ENV_VAR}"
+    #     job_name = f"test-job-{uuid.uuid1()}"
+    #     data = {
+    #         "script": script,
+    #         "image": "alpine",
+    #         "name": job_name,
+    #         "env": {"MY_ENV_VAR": "FOO"},
+    #     }
+    #     response = client.post(
+    #         "/services/kbatch/jobs/",
+    #         data,
+    #         format="json",
+    #         **AUTH_HEADER,
+    #     )
+    #     assert response.status_code == 201
+    #     result = response.json()
+    #     assert result.pop("user") == USERNAME
+    #     assert result.pop("command") is None
+    #     url = result.pop("url")
+    #     assert url.startswith("http://testserver/services/kbatch/jobs/")
+
+    #     assert result == data

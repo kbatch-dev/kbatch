@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import Group
-from django_kbatch_server.models import User, Job
+from django_kbatch_server.models import User, Job, Upload
 
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -18,6 +18,15 @@ class GroupSerializer(serializers.HyperlinkedModelSerializer):
 class JobSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Job
-        fields = ["url", "command", "script", "image", "name", "env", "user"]
+        fields = ["url", "command", "image", "name", "env", "user", "upload"]
 
+    user = serializers.ReadOnlyField(source="user.username")
+
+
+class UploadSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Upload
+        fields = ["url", "file", "user"]
+
+    file = serializers.FileField()
     user = serializers.ReadOnlyField(source="user.username")

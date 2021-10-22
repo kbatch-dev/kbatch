@@ -2,6 +2,22 @@
 
 The server component of kbatch.
 
+## Configuration
+
+Running the application requires setting several configuration values.
+
+Set this in a `.env` file
+
+|       Settings key        |                                          Purpose                                          |
+| ------------------------- | ----------------------------------------------------------------------------------------- |
+| JUPYTERHUB_API_TOKEN      | Authenticate with JupyterHub                                                              |
+| JUPYTERHUB_SERVICE_PREFIX | The prefix this application is running under as a JupyterHub service                      |
+| DEFAULT_FILE_STORAGE      | The file storage class to use for user-uploaded scripts. Must be accessible by Kubernetes |
+| AZURE_ACCOUNT_NAME        | Specific to `storage.backends.azure_storage.AzureStorage`                                 |
+| AZURE_CONTAINER           | Specific to `storage.backends.azure_storage.AzureStorage`                                 |
+| AZURE_SAS_TOKEN           | Specific to `storage.backends.azure_storage.AzureStorage`                                 |
+
+
 ## Deployment
 
 The application can be deployed with helm. Given a configuration like the following
@@ -46,4 +62,13 @@ The `.env.test` file contains settings for unit tests. You should have kubernete
 
 ```
 $ KBATCH_SETTINGS_PATH=.env.test pytest
+```
+
+
+## Example
+
+The `examples` notebook has a small demo.
+
+```
+$ SAS_TOKEN=... ADMIN_PASSWORD=... sh submit.sh
 ```
