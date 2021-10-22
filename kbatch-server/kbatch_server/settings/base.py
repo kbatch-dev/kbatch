@@ -175,6 +175,7 @@ KBATCH_JOB_EXTRA_RESOURCE_GUARANTEES = None
 DEFAULT_FILE_STORAGE = env(
     "DEFAULT_FILE_STORAGE", default="django.core.files.storage.FileSystemStorage"
 )
-# AZURE_ACCOUNT_NAME = env("AZURE_ACCOUNT_NAME")
-# AZURE_CONTAINER = env("AZURE_CONTAINER")
-# AZURE_SAS_TOKEN = env("AZURE_SAS_TOKEN")
+if DEFAULT_FILE_STORAGE == "storages.backends.azure_storage.AzureStorage":
+    AZURE_ACCOUNT_NAME = env("AZURE_ACCOUNT_NAME", None)
+    AZURE_CONTAINER = env("AZURE_CONTAINER", None)
+    AZURE_SAS_TOKEN = env("AZURE_SAS_TOKEN")

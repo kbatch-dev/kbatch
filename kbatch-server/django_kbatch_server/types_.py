@@ -51,7 +51,7 @@ class Job:
 class KubernetesConfig:
     namespace: str = "default"
     labels: Optional[Mapping[str, str]] = None
-    annotations: Dict[str, str] = None
+    annotations: Optional[Dict[str, str]] = None
     cpu_limit: Optional[str] = None
     cpu_guarantee: Optional[str] = None
     mem_limit: Optional[str] = None

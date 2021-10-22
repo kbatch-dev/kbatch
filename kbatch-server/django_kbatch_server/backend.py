@@ -10,6 +10,7 @@ import pathlib
 import string
 import escapism
 import uuid
+from typing import Optional, List, Any
 
 from kubernetes import client
 from kubernetes import config
@@ -124,7 +125,7 @@ def make_job(
         annotations=annotations,
     )
     if k8s_config.tolerations:
-        tolerations = [
+        tolerations: Optional[List[Any]] = [
             parse_toleration(v) if isinstance(v, str) else v
             for v in k8s_config.tolerations
         ]
