@@ -87,12 +87,22 @@ class TestKBatch:
         file = SimpleUploadedFile("file.txt", b"abc", content_type="text/plain")
 
         response = client.post(
-            "/services/kbatch/jobs/",
-            {"name": f"test-2-{uuid.uuid1()}", "file": file},
+            "/services/kbatch/uploads/",
+            {"file": file},
             format="multipart",
             **AUTH_HEADER,
         )
         assert response.status_code == 201
+        result = response.json()
+
+        response = client.post(
+            "/services/kbatch/jobs/",
+            {"upload": result["url"], "name": f"test-{uuid.uuid1()}"},
+            format="json",
+            **AUTH_HEADER,
+        )
+        assert response.status_code == 201
+        assert response.json()["upload"] == result["url"]
 
     def test_post_upload_data(self):
         data = {
@@ -113,47 +123,3 @@ class TestKBatch:
         assert result.pop("user") == USERNAME
         assert result["name"] == data["name"]
         assert "uploaded_data" not in response
-
-    # def test_post_script(self):
-    #     script = "ls -lh"
-    #     job_name = f"test-job-{uuid.uuid1()}"
-    #     data = {"script": script, "image": "alpine", "name": job_name}
-    #     response = client.post(
-    #         "/services/kbatch/jobs/",
-    #         data,
-    #         format="json",
-    #         **AUTH_HEADER,
-    #     )
-    #     assert response.status_code == 201
-    #     result = response.json()
-    #     assert result.pop("user") == USERNAME
-    #     assert result.pop("command") is None
-    #     assert result.pop("env") is None
-    #     url = result.pop("url")
-    #     assert url.startswith("http://testserver/services/kbatch/jobs/")
-
-    #     assert result == data
-
-    # def test_post_env(self):
-    #     script = "echo ${MY_ENV_VAR}"
-    #     job_name = f"test-job-{uuid.uuid1()}"
-    #     data = {
-    #         "script": script,
-    #         "image": "alpine",
-    #         "name": job_name,
-    #         "env": {"MY_ENV_VAR": "FOO"},
-    #     }
-    #     response = client.post(
-    #         "/services/kbatch/jobs/",
-    #         data,
-    #         format="json",
-    #         **AUTH_HEADER,
-    #     )
-    #     assert response.status_code == 201
-    #     result = response.json()
-    #     assert result.pop("user") == USERNAME
-    #     assert result.pop("command") is None
-    #     url = result.pop("url")
-    #     assert url.startswith("http://testserver/services/kbatch/jobs/")
-
-    #     assert result == data
