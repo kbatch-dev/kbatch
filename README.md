@@ -34,9 +34,22 @@ This will create configuration file that specifies the default URL and credentia
 
 Submit a job
 
-```
-$ kbatch submit myscript.py --image=...
-...
+```console
+$ kbatch job submit --name=test \
+    --image="mcr.microsoft.com/planetary-computer/python" \
+    --command="[\"sh\"]" \
+    --file=examples/script.sh \
+    --url="http://localhost:8000/services/kbatch/" \
+    --env='{"SAS_TOKEN": "'${SAS_TOKEN}'"}'
+{
+    'url': 'http://localhost:8000/services/kbatch/jobs/14/',
+    'command': ['sh'],
+    'image': 'mcr.microsoft.com/planetary-computer/python',
+    'name': 'test',
+    'env': {'SAS_TOKEN': '***'},
+    'user': 'taugspurger',
+    'upload': 'http://localhost:8000/services/kbatch/uploads/19/'
+}
 ```
 
 List jobs
