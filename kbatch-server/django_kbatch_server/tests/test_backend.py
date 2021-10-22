@@ -1,26 +1,24 @@
 import pytest
 import kubernetes.client
 
-from django_kbatch_server import models
+from django_kbatch_server import types_
 from django_kbatch_server import backend
 
 
 @pytest.fixture
 def model_user():
-    user = models.User(username="taugspurger")
-    return user
+    return types_.User(username="taugspurger")
 
 
 @pytest.fixture
 def model_job(model_user):
-    return models.Job(
+    return types_.Job(
         id=1, name="name", command=["ls", "-lh"], image="alpine", user=model_user
     )
 
 
 def test_resource_limits(model_job):
-    job = backend.make_job(
-        model_job,
+    k8s_config = types_.KubernetesConfig(
         cpu_guarantee="100m",
         cpu_limit="500m",
         mem_guarantee="1Gi",
@@ -28,6 +26,8 @@ def test_resource_limits(model_job):
         extra_resource_guarantees={"nvidia.com/gpu": 1},
         extra_resource_limits={"nvidia.com/gpu": 1},
     )
+
+    job = backend.make_job(model_job, k8s_config)
 
     container = job.spec.template.spec.containers[0]
 
@@ -51,8 +51,13 @@ def test_resource_limits(model_job):
         ],
     ],
 )
-def test_env(model_job, env):
-    job = backend.make_job(model_job, env=env)
+def test_env(model_user, env):
+    k8s_config = types_.KubernetesConfig()
+    jobin = types_.Job(
+        id=1, name="name", command=["ls -lh"], image="alpine", user=model_user, env=env
+    )
+
+    job = backend.make_job(jobin, k8s_config)
     container = job.spec.template.spec.containers[0]
     assert container.env == [
         kubernetes.client.V1EnvVar(name="KEY1", value="VALUE1"),
@@ -70,7 +75,8 @@ def test_env(model_job, env):
     ],
 )
 def test_node_tolerations(model_job, toleration):
-    job = backend.make_job(model_job, tolerations=[toleration])
+    k8s_config = types_.KubernetesConfig(tolerations=[toleration])
+    job = backend.make_job(model_job, k8s_config)
     pod = job.spec.template.spec
 
     assert pod.tolerations == [

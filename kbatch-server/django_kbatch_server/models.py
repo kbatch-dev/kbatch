@@ -2,7 +2,9 @@ import logging
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
-from django.conf import settings
+
+from . import backend
+from . import types_
 
 
 logger = logging.getLogger(__name__)
@@ -46,23 +48,16 @@ class Job(models.Model):
     upload = models.ForeignKey(Upload, on_delete=models.CASCADE, blank=True, null=True)
 
     def save(self, *args, **kwargs):
-        from . import backend
-
         if self.pk:
             # We're updating an existing record.
             return super().save(*args, **kwargs)
 
         result = super().save(*args, **kwargs)
-        k8s_job = backend.make_job(
-            job=self,
-            env=self.env,  # TODO remove
-            namespace=settings.KBATCH_JOB_NAMESPACE,
-            cpu_guarantee=settings.KBATCH_JOB_CPU_GUARANTEE,
-            cpu_limit=settings.KBATCH_JOB_CPU_LIMIT,
-            mem_guarantee=settings.KBATCH_JOB_MEM_GUARANTEE,
-            mem_limit=settings.KBATCH_JOB_MEM_LIMIT,
-            tolerations=settings.KBATCH_JOB_TOLERATIONS,
-        )
+
+        job = types_.Job.from_model(self)
+        k8s_config = types_.KubernetesConfig.from_settings()
+
+        k8s_job = backend.make_job(job=job, k8s_config=k8s_config)
         logger.info("Submitting configmap for job %d", self.pk)
 
         batch_api = backend.make_api()

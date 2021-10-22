@@ -1,3 +1,6 @@
+"""
+Do these tests mock the backend? I think so...
+"""
 import pathlib
 
 import pytest
@@ -24,6 +27,11 @@ def mock_hub(mocker):
         autospec=True,
         side_effect=authenticate_side_effect,
     )
+
+
+@pytest.fixture
+def mock_backend(mocker):
+    yield mocker.patch("django_kbatch_server.models.backend")
 
 
 @pytest.mark.usefixtures("mock_hub")

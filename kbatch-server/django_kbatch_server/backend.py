@@ -10,7 +10,6 @@ import pathlib
 import string
 import escapism
 import uuid
-from typing import Dict, Optional, List, Union, Mapping
 
 from kubernetes import client
 from kubernetes import config
@@ -28,7 +27,8 @@ from kubernetes.client.models import (
     V1Container,
 )
 
-from .models import Job
+# from .models import Job
+from .types_ import Job, KubernetesConfig
 
 # TODO: figure out how to associate with a user. Attach it as a label  or annotation probably.
 # TODO: figure out how to "upload" files.
@@ -52,18 +52,7 @@ def parse_toleration(t: str) -> V1Toleration:
 
 def make_job(
     job: Job,
-    *,
-    namespace: str = "default",
-    labels: Optional[Mapping[str, str]] = None,
-    annotations: Dict[str, str] = None,
-    cpu_guarantee: Optional[str] = None,
-    cpu_limit: Optional[str] = None,
-    mem_limit: Optional[str] = None,
-    mem_guarantee: Optional[str] = None,
-    extra_resource_limits: Optional[Dict[str, str]] = None,
-    extra_resource_guarantees: Optional[Dict[str, str]] = None,
-    tolerations: Optional[Union[List[str], List[V1Toleration]]] = None,
-    env: Optional[Union[List[V1EnvVar], Mapping[str, str]]] = None,
+    k8s_config: KubernetesConfig,
 ) -> V1Job:
     """
     Make a Kubernetes pod specification for a user-submitted job.
@@ -73,6 +62,10 @@ def make_job(
     image = job.image
     command = job.command
     args = job.args
+
+    annotations = k8s_config.annotations
+    labels = k8s_config.labels
+    env = job.env
 
     annotations = annotations or {}
     annotations.setdefault(
@@ -109,31 +102,34 @@ def make_job(
 
     container.resources.requests = {}
 
-    if cpu_guarantee:
-        container.resources.requests["cpu"] = cpu_guarantee
-    if mem_guarantee:
-        container.resources.requests["memory"] = mem_guarantee
-    if extra_resource_guarantees:
-        container.resources.requests.update(extra_resource_guarantees)
+    if k8s_config.cpu_guarantee:
+        container.resources.requests["cpu"] = k8s_config.cpu_guarantee
+    if k8s_config.mem_guarantee:
+        container.resources.requests["memory"] = k8s_config.mem_guarantee
+    if k8s_config.extra_resource_guarantees:
+        container.resources.requests.update(k8s_config.extra_resource_guarantees)
 
     container.resources.limits = {}
-    if cpu_limit:
-        container.resources.limits["cpu"] = cpu_limit
-    if mem_limit:
-        container.resources.limits["memory"] = mem_limit
-    if extra_resource_limits:
-        container.resources.limits.update(extra_resource_limits)
+    if k8s_config.cpu_limit:
+        container.resources.limits["cpu"] = k8s_config.cpu_limit
+    if k8s_config.mem_limit:
+        container.resources.limits["memory"] = k8s_config.mem_limit
+    if k8s_config.extra_resource_limits:
+        container.resources.limits.update(k8s_config.extra_resource_limits)
 
     pod_metadata = V1ObjectMeta(
         name=f"{name}-pod",
-        namespace=namespace,
+        namespace=k8s_config.namespace,
         labels=labels,
         annotations=annotations,
     )
-    if tolerations:
+    if k8s_config.tolerations:
         tolerations = [
-            parse_toleration(v) if isinstance(v, str) else v for v in tolerations
+            parse_toleration(v) if isinstance(v, str) else v
+            for v in k8s_config.tolerations
         ]
+    else:
+        tolerations = None
 
     init_containers = None
     if job.upload:
@@ -167,7 +163,7 @@ def make_job(
         name=name,
         annotations=annotations,
         labels=labels,
-        namespace=namespace,
+        namespace=k8s_config.namespace,
     )
 
     job = V1Job(
