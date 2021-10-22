@@ -94,6 +94,26 @@ class TestKBatch:
         )
         assert response.status_code == 201
 
+    def test_post_upload_data(self):
+        data = {
+            "name": f"test-{uuid.uuid1()}",
+            "upload_data": "ls -lh",
+        }
+        response = client.post(
+            "/services/kbatch/jobs/", data, format="json", **AUTH_HEADER
+        )
+        assert response.status_code == 201
+        result = response.json()
+
+        assert result.pop("command") is None
+        assert result.pop("env") is None
+        assert result.pop("image") == "alpine"
+        assert result.pop("upload")
+        assert result.pop("url")
+        assert result.pop("user") == USERNAME
+        assert result["name"] == data["name"]
+        assert "uploaded_data" not in response
+
     # def test_post_script(self):
     #     script = "ls -lh"
     #     job_name = f"test-job-{uuid.uuid1()}"

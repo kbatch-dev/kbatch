@@ -27,6 +27,9 @@ class Upload(models.Model):
     file = models.FileField(blank=True, null=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
+    def save(self, *args, **kwargs) -> None:
+        return super().save(*args, **kwargs)
+
 
 class Job(models.Model):
     args = models.JSONField(blank=True, null=True)
