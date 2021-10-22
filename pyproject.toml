@@ -33,6 +33,8 @@ module = [
     "django.core.wsgi",
     "rest_framework",
     "rest_framework.authentication",
+    "rest_framework.exceptions",
+    "rest_framework.parsers",
     "rest_framework.test",
 ]
 ignore_missing_imports = true

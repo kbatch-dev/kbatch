@@ -1,6 +1,6 @@
 import pytest
 
-from django.core.validators import ValidationError
+from django.core.exceptions import ValidationError
 from django_kbatch_server.models import User, Job
 
 

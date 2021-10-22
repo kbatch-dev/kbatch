@@ -2,7 +2,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, List, Dict, Optional, Mapping
 
 from django.conf import settings
-from django.core.files import File
+from django.db.models.fields.files import FieldFile
+
 
 if TYPE_CHECKING:
     from . import models
@@ -15,7 +16,7 @@ class User:
 
 @dataclass(frozen=True)
 class Upload:
-    file: File
+    file: FieldFile
 
     @classmethod
     def from_model(cls, upload):
