@@ -64,5 +64,5 @@ class UploadSerializer(serializers.HyperlinkedModelSerializer):
         model = Upload
         fields = ["url", "file", "user"]
 
-    file = serializers.FileField()
+    file = serializers.FileField(write_only=True)
     user = serializers.ReadOnlyField(source="user.username")
