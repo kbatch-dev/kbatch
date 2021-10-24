@@ -12,9 +12,13 @@ def cli():
     pass
 
 
-@cli.group()
-def login():
-    pass
+@cli.command()
+@click.option("--jupyterhub-url")
+@click.option("--kbatch-url")
+@click.option("--token")
+def configure(jupyterhub_url, kbatch_url, token):
+    _core.configure(jupyterhub_url, kbatch_url, token)
+    rich.print("[green]OK[/green]")
 
 
 @cli.group()
