@@ -2,7 +2,7 @@
 # This stands in for a proper kbatch client. Don't actually do this.
 set -eu
 
-zip submit sumbit.sh
+zip script script.sh
 
 url=$(curl -s -u admin:${ADMIN_PASSWORD} -X POST -H "Content-Type: multipart/form-data" -F "file=@script.zip" http://localhost:8050/uploads/ | jq -r .url)
 echo "url: ${url}"

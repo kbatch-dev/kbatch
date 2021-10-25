@@ -138,7 +138,7 @@ def make_job(
                     "-c",
                     (
                         f'wget "{job.upload.file.url}" -O /{job.upload.file.name}; '
-                        "unzip -d /code/ /{job.upload.file.name}",
+                        f"unzip -d /code/ /{job.upload.file.name}"
                     ),
                 ],
                 command=["/bin/sh"],
