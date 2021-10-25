@@ -69,7 +69,12 @@ class TestKBatch:
         }
 
         job_name = f"test-job-{uuid.uuid1()}"
-        data = {"command": ["ls", "-lh"], "image": "alpine", "name": job_name}
+        data = {
+            "command": ["ls", "-lh"],
+            "image": "alpine",
+            "name": job_name,
+            "description": "My job!",
+        }
         response = client.post(
             "/services/kbatch/jobs/",
             data,
@@ -118,10 +123,26 @@ class TestKBatch:
         assert response.status_code == 201
         assert response.json()["upload"] == result["url"]
 
-    def test_post_upload_data(self):
+    def test_post_upload_data_no_strings(self):
         data = {
             "name": f"test-{uuid.uuid1()}",
             "upload_data": "ls -lh",
+        }
+        response = client.post(
+            "/services/kbatch/jobs/", data, format="json", **AUTH_HEADER
+        )
+        assert response.status_code == 400
+        assert response.json()["upload_data"] == [
+            "Incorrect structure for upload data field. Must have a 'name' and 'content' field."
+        ]
+
+    def test_post_upload_data(self):
+        data = {
+            "name": f"test-{uuid.uuid1()}",
+            "upload_data": {
+                "name": "foo.sh",
+                "content": "ls -lh",
+            },
         }
         response = client.post(
             "/services/kbatch/jobs/", data, format="json", **AUTH_HEADER
@@ -137,6 +158,8 @@ class TestKBatch:
         assert result.pop("user") == USERNAME
         assert result["name"] == data["name"]
         assert "uploaded_data" not in response
+
+        # TODO: test that we correctly created the Zipfile by reading in the last upload.
 
     def test_requires_zip(self, tmp_path: pathlib.Path):
         p = tmp_path / "file.txt"

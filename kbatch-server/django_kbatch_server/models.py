@@ -40,6 +40,7 @@ class Job(models.Model):
     image = models.TextField(default="alpine")
     name = models.TextField(validators=[name_validator])
     env = models.JSONField(blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
 
     # Relations
     user = models.ForeignKey(User, on_delete=models.CASCADE)
