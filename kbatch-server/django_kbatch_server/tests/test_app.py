@@ -44,24 +44,24 @@ class TestKBatch:
         response = client.get("/")
         assert response.status_code == 200
 
-        response = client.get("/services/kbatch/")
+        response = client.get("/")
         assert response.status_code == 200
 
     def test_list_jobs_unauthenticated(self):
-        response = client.get("/services/kbatch/jobs/")
+        response = client.get("/jobs/")
         assert response.status_code == 401
 
         job_name = f"test-job-{uuid.uuid1()}"
 
         data = {"command": ["ls", "-lh"], "image": "alpine", "name": job_name}
         response = client.post(
-            "/services/kbatch/jobs/",
+            "/jobs/",
             data,
         )
         assert response.status_code == 401
 
     def test_list_jobs(self):
-        response = client.get("/services/kbatch/jobs/", **AUTH_HEADER)
+        response = client.get("/jobs/", **AUTH_HEADER)
         assert response.status_code == 200
         assert response.json() == {
             "count": 0,
@@ -78,7 +78,7 @@ class TestKBatch:
             "description": "My job!",
         }
         response = client.post(
-            "/services/kbatch/jobs/",
+            "/jobs/",
             data,
             format="json",
             **AUTH_HEADER,
@@ -89,7 +89,7 @@ class TestKBatch:
         assert result.pop("upload") is None
         assert result.pop("env") is None
         url = result.pop("url")
-        assert url.startswith("http://testserver/services/kbatch/jobs/")
+        assert url.startswith("http://testserver/jobs/")
 
         assert result == data
 
@@ -108,7 +108,7 @@ class TestKBatch:
         )
 
         response = client.post(
-            "/services/kbatch/uploads/",
+            "/uploads/",
             {"file": file},
             format="multipart",
             **AUTH_HEADER,
@@ -117,7 +117,7 @@ class TestKBatch:
         result = response.json()
 
         response = client.post(
-            "/services/kbatch/jobs/",
+            "/jobs/",
             {"upload": result["url"], "name": f"test-{uuid.uuid1()}"},
             format="json",
             **AUTH_HEADER,
@@ -130,9 +130,7 @@ class TestKBatch:
             "name": f"test-{uuid.uuid1()}",
             "upload_data": "ls -lh",
         }
-        response = client.post(
-            "/services/kbatch/jobs/", data, format="json", **AUTH_HEADER
-        )
+        response = client.post("/jobs/", data, format="json", **AUTH_HEADER)
         assert response.status_code == 400
         assert response.json()["upload_data"] == [
             "Incorrect structure for upload data field. Must have a 'name' and 'content' field."
@@ -148,9 +146,7 @@ class TestKBatch:
                 "content": "ls -lh",
             },
         }
-        response = client.post(
-            "/services/kbatch/jobs/", data, format="json", **AUTH_HEADER
-        )
+        response = client.post("/jobs/", data, format="json", **AUTH_HEADER)
         assert response.status_code == 201
         result = response.json()
 
@@ -174,7 +170,7 @@ class TestKBatch:
         file = SimpleUploadedFile("file.txt", b"abc", content_type="text/plain")
 
         response = client.post(
-            "/services/kbatch/uploads/",
+            "/uploads/",
             {"file": file},
             format="multipart",
             **AUTH_HEADER,

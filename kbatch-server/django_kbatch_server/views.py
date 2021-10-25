@@ -1,6 +1,7 @@
 from django.contrib.auth.models import Group
 from rest_framework import viewsets
 from rest_framework import permissions
+from rest_framework.schemas import get_schema_view
 from django_kbatch_server.serializers import (
     UserSerializer,
     GroupSerializer,
@@ -60,3 +61,6 @@ class UploadViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+
+schema_view = get_schema_view(title="kbatchk")
