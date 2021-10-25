@@ -1,8 +1,12 @@
+import zipfile
+
 from rest_framework import serializers
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.auth.models import Group
-from django_kbatch_server.models import User, Job, Upload
+from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
+
+from django_kbatch_server.models import User, Job, Upload
 
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -59,10 +63,23 @@ class JobSerializer(serializers.HyperlinkedModelSerializer):
         return result
 
 
+class ZipFileField(serializers.FileField):
+    default_error_messages = {
+        **dict(serializers.FileField.default_error_messages),
+        **{"zip": _("The submitted file must be a ZIP archive.")},
+    }
+
+    def to_internal_value(self, data):
+        data = super().to_internal_value(data)
+        if not zipfile.is_zipfile(data.file):
+            self.fail("zip")
+        return data
+
+
 class UploadSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Upload
         fields = ["url", "file", "user"]
 
-    file = serializers.FileField(write_only=True)
+    file = ZipFileField(write_only=True)
     user = serializers.ReadOnlyField(source="user.username")

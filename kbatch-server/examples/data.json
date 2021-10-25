@@ -1,4 +1,4 @@
 {
     "image": "mcr.microsoft.com/planetary-computer/python",
     "name": "my-job",
-    "command": ["sh"]}
+    "command": ["sh", "script.sh"]}

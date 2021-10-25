@@ -26,11 +26,10 @@ name_validator = RegexValidator(
 
 
 class Upload(models.Model):
+    # TODO: Verify if we need additional validation that the file is a Zip
+    # here and in fields, not just serailizers.
     file = models.FileField(blank=True, null=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-
-    def save(self, *args, **kwargs) -> None:
-        return super().save(*args, **kwargs)
 
 
 class Job(models.Model):

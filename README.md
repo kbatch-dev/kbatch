@@ -64,3 +64,15 @@ Show the detail on a given job
 ```
 $ kbatch jobs show --job-id=...
 ```
+
+## Local file handling
+
+Your job probably involves some local files / scripts that are used by your job. How do we get those files from your local machine to the job?
+
+When submitting the job, you can specify the path to the local code files to make available to the job. This can be either a single file (e.g. `script.sh` or `main.py`) or a directory of files (e.g. `my-dir/`). The file or files are then uploaded to the server. That gets us from local to "the cloud". Now we need to complete the last step from the cloud to the job.
+
+*Before* your job starts up, the server ensures that your local files are available on the file system running your job. By default, your code is available at `/code`. If you uploaded a single script `script.sh`, that will be available at `/code/script.sh`.
+
+If you uploaded a directory of files named `my-dir`, it's available at `/code/<my-dir>/`.
+
+When you job starts executing, its working directory is `/code`. So you can safely refer to relative paths like `sh script.sh` or `python my-dir/main.py`.

@@ -2,10 +2,11 @@
 Do these tests mock the backend? I think so...
 """
 import pathlib
+import uuid
+import zipfile
 
 import pytest
-import uuid
-
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 
 
@@ -86,13 +87,18 @@ class TestKBatch:
         assert result == data
 
     def test_post_file(self, tmp_path: pathlib.Path):
-        from django.core.files.uploadedfile import SimpleUploadedFile
 
         p = tmp_path / "file.txt"
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text("ls")
+        zp = p.parent.with_suffix(".zip")
 
-        file = SimpleUploadedFile("file.txt", b"abc", content_type="text/plain")
+        with zipfile.ZipFile(zp, mode="w") as zf:
+            zf.write(p)
+
+        file = SimpleUploadedFile(
+            "file.txt", zp.read_bytes(), content_type="application/zip"
+        )
 
         response = client.post(
             "/services/kbatch/uploads/",
@@ -131,3 +137,21 @@ class TestKBatch:
         assert result.pop("user") == USERNAME
         assert result["name"] == data["name"]
         assert "uploaded_data" not in response
+
+    def test_requires_zip(self, tmp_path: pathlib.Path):
+        p = tmp_path / "file.txt"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("ls")
+
+        file = SimpleUploadedFile("file.txt", b"abc", content_type="text/plain")
+
+        response = client.post(
+            "/services/kbatch/uploads/",
+            {"file": file},
+            format="multipart",
+            **AUTH_HEADER,
+        )
+        assert response.status_code == 400
+        assert response.json() == {
+            "file": ["The submitted file must be a ZIP archive."]
+        }

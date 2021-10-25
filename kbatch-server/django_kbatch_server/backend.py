@@ -88,9 +88,6 @@ def make_job(
     if isinstance(env, collections.abc.Mapping):
         env = [V1EnvVar(name=k, value=v) for k, v in env.items()]
 
-    if args is None and command and job.upload:
-        args = [f"/code/{job.upload.file.name}"]
-
     container = V1Container(
         args=args,
         command=command,
@@ -99,6 +96,7 @@ def make_job(
         env=env,
         volume_mounts=[file_volume_mount],
         resources=V1ResourceRequirements(),
+        working_dir="/code",
     )
 
     container.resources.requests = {}
@@ -137,11 +135,13 @@ def make_job(
         init_containers = [
             V1Container(
                 args=[
-                    "wget",
-                    job.upload.file.url,
-                    "-O",
-                    f"/code/{job.upload.file.name}",
+                    "-c",
+                    (
+                        f'wget "{job.upload.file.url}" -O /{job.upload.file.name}; '
+                        "unzip -d /code/ /{job.upload.file.name}",
+                    ),
                 ],
+                command=["/bin/sh"],
                 image="inutano/wget:1.20.3-r1",
                 name=f"{name}-init",
                 volume_mounts=[file_volume_mount],
