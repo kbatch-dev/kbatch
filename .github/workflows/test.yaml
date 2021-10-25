@@ -35,12 +35,20 @@ jobs:
         run: |
           pip freeze
 
-      - name: Run Tests
+      - name: Run kbatch-server tests
         run: |
           cd kbatch-server
+          pytest -v
+
+      - name: Run kbatch-client tests
+        run: |
+          # TODO: think about splitting these, to avoid env issues
+          cd kbatch
           pytest -v
 
       - name: Run mypy
         run: |
           python -m pip install mypy django-stubs
           mypy kbatch-server
+          # TODO: add mypy.
+          # mypy kbatch --exclude=kbatch.tests.examples

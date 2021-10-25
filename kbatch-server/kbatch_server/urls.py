@@ -14,7 +14,6 @@ router.register(r"uploads", views.UploadViewSet)
 urlpatterns = [
     # path("", include(router.urls)),
     path(settings.JUPYTERHUB_SERVICE_PREFIX, include(router.urls)),
-    path("schema", views.schema_view),
     path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
     path("admin/", admin.site.urls),
 ]
