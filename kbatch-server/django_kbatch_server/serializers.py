@@ -73,10 +73,11 @@ class JobSerializer(serializers.HyperlinkedModelSerializer):
             name = upload_data["name"]
             content = upload_data["content"]
             sink = io.BytesIO()
-            zf = zipfile.ZipFile(sink, mode="w")
-            zf.writestr(name, content)
+            with zipfile.ZipFile(sink, mode="w") as zf:
+                zf.writestr(name, content)
 
             sink.seek(0)
+            assert zipfile.is_zipfile(sink)
 
             upload = Upload(
                 user=validated_data["user"],

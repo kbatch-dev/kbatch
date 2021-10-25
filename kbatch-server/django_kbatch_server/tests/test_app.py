@@ -9,6 +9,8 @@ import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 
+from django_kbatch_server.models import Upload
+
 
 client = APIClient()
 
@@ -136,6 +138,8 @@ class TestKBatch:
             "Incorrect structure for upload data field. Must have a 'name' and 'content' field."
         ]
 
+    # TODO: report / fix upstream
+    @pytest.mark.filterwarnings("ignore:download_to_stream:DeprecationWarning")
     def test_post_upload_data(self):
         data = {
             "name": f"test-{uuid.uuid1()}",
@@ -159,7 +163,8 @@ class TestKBatch:
         assert result["name"] == data["name"]
         assert "uploaded_data" not in response
 
-        # TODO: test that we correctly created the Zipfile by reading in the last upload.
+        upload = Upload.objects.last()
+        assert zipfile.is_zipfile(upload.file)
 
     def test_requires_zip(self, tmp_path: pathlib.Path):
         p = tmp_path / "file.txt"
