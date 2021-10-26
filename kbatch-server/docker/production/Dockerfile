@@ -11,10 +11,11 @@ COPY ./kbatch_server /code/kbatch_server
 COPY ./manage.py /code/manage.py
 COPY entrypoint /entrypoint
 
-COPY ./docker/local/start /start
+COPY ./docker/production/start /start
 RUN sed -i 's/\r$//g' /start
 RUN chmod +x /start
 # TODO: figure out k3s / docker-compose stuff
 # COPY .kubeconfig /.config
+CMD /start
 
 ENTRYPOINT [ "/entrypoint" ]
