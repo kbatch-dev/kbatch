@@ -31,7 +31,10 @@ we're using the [azure storage](https://django-storages.readthedocs.io/en/latest
 
 ## Deployment
 
-The application can be deployed with helm. Given a configuration like the following
+The application can be deployed with helm. We're assuming it's deployed as a JupyterHub service to avoid needing
+to expose the server to the outside world. All communication with the service will be through JupyterHub.
+
+Given a configuration like the following
 
 ```
 # config.yaml
@@ -40,10 +43,6 @@ app:
   jupyterhub_api_url: https://pcc-staging.westeurope.cloudapp.azure.com/compute/hub/api
   job_namespace: staging
   service_prefix: "/compute/services/kbatch"
-  service:
-    type: LoadBalancer
-    annotations:
-      service.beta.kubernetes.io/azure-dns-label-name: kbatch-staging
 ```
 
 Deploy with with

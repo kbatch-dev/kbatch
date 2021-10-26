@@ -9,7 +9,7 @@ __pycache__
 .env.fish
 .env
 *.egg-info
-deployment
+deploy
 db.sqlite3
 staticfiles
 jupyterhub-proxy.pid
