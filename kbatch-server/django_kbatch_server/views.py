@@ -1,3 +1,4 @@
+from django.http import HttpResponse
 from rest_framework import viewsets
 from rest_framework import permissions
 from django_kbatch_server.serializers import (
@@ -37,3 +38,7 @@ class UploadViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+
+def root(request):
+    return HttpResponse("kbatch", content_type="text/plain")
