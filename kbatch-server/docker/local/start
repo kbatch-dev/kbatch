@@ -6,5 +6,4 @@ set -o nounset
 
 
 python manage.py migrate
-# python manage.py runserver 0.0.0.0:8050
-gunicorn .wsgi:application --bind 0.0.0.0:8050 --workers=4
+python manage.py runserver 0.0.0.0:8050

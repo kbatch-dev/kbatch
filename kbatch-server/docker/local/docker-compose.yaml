@@ -26,3 +26,4 @@ services:
       JUPYTERHUB_HOST: http://127.0.0.1:8000
       JUPTYERHUB_SERVICE_PREFIX: services/kbatch/
       DJANGO_SETTINGS_MODULE: kbatch_server.settings.local
+      KUBECONFIG: /.config

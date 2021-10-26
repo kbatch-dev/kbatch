@@ -14,5 +14,7 @@ COPY entrypoint /entrypoint
 COPY ./docker/local/start /start
 RUN sed -i 's/\r$//g' /start
 RUN chmod +x /start
+# TODO: figure out k3s / docker-compose stuff
+# COPY .kubeconfig /.config
 
 ENTRYPOINT [ "/entrypoint" ]
