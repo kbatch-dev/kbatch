@@ -3,7 +3,7 @@ c.JupyterHub.bind_url = "http://:8000"
 c.JupyterHub.services = [
     {
         "name": "kbatch",
-        "url": "http://localhost:8050/",
+        "url": "http://kbatch-server:8050/",
         "api_token": "super-secret",
     }
 ]

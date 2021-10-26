@@ -11,4 +11,8 @@ COPY ./kbatch_server /code/kbatch_server
 COPY ./manage.py /code/manage.py
 COPY entrypoint /entrypoint
 
+COPY ./docker/local/start /start
+RUN sed -i 's/\r$//g' /start
+RUN chmod +x /start
+
 ENTRYPOINT [ "/entrypoint" ]

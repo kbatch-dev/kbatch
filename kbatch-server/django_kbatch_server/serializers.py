@@ -3,23 +3,10 @@ import zipfile
 
 from rest_framework import serializers
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.contrib.auth.models import Group
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
-from django_kbatch_server.models import User, Job, Upload
-
-
-class UserSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = User
-        fields = ["url", "username", "email", "groups"]
-
-
-class GroupSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = Group
-        fields = ["url", "name"]
+from django_kbatch_server.models import Job, Upload
 
 
 class UploadDataField(serializers.JSONField):

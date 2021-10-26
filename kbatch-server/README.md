@@ -17,6 +17,17 @@ Set this in a `.env` file
 | AZURE_CONTAINER           | Specific to `storage.backends.azure_storage.AzureStorage`                                 |
 | AZURE_SAS_TOKEN           | Specific to `storage.backends.azure_storage.AzureStorage`                                 |
 
+## Upload storage
+
+kbatch allows users to upload code and the backend takes care of making it available to the pod at job runtime.
+We implement this by
+
+1. Providing an `uploads/` endpoint where users can `POST` ZIP archives with code
+2. Making an HTTP request from the Job's init container to fetch and unzip the code
+
+This of course requires a storage backend that can (securely) provide access to the files. Right now
+we're using the [azure storage](https://django-storages.readthedocs.io/en/latest/backends/azure.html) backend from
+`django-storages`. We might consider (optionally) folding this into the service it self.
 
 ## Deployment
 
@@ -62,13 +73,4 @@ The `.env.test` file contains settings for unit tests. You should have kubernete
 
 ```
 $ KBATCH_SETTINGS_PATH=.env.test pytest
-```
-
-
-## Example
-
-The `examples` notebook has a small demo.
-
-```
-$ SAS_TOKEN=... ADMIN_PASSWORD=... sh submit.sh
 ```
