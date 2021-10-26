@@ -12,3 +12,4 @@ __pycache__
 deployment
 db.sqlite3
 staticfiles
+jupyterhub-proxy.pid

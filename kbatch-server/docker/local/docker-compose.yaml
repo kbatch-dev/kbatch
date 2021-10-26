@@ -22,7 +22,7 @@ services:
     #   - ../../.envs/.local/.django
     environment:
       JUPYTERHUB_API_TOKEN: super-secret
-      JUPYTERHUB_API_URL: http://jupyterhub:8000/hub/api
+      JUPYTERHUB_API_URL: http://hub:8000/hub/api
       JUPYTERHUB_HOST: http://127.0.0.1:8000
       JUPTYERHUB_SERVICE_PREFIX: services/kbatch/
       DJANGO_SETTINGS_MODULE: kbatch_server.settings.local
