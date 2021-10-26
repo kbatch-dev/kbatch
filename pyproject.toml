@@ -13,7 +13,7 @@ addopts = '--color=yes'
 
 [tool.mypy]
 warn_unused_configs = true
-exclude = "kbatch-server/(examples|setup.py|manage.py|kbatch_server/settings/base.py)"
+exclude = "kbatch-server/(docker|setup.py|manage.py|kbatch_server/settings/base.py)"
 plugins = ["mypy_django_plugin.main"]
 
 [tool.django-stubs]
