@@ -113,16 +113,21 @@ def configure(jupyterhub_url=None, kbatch_url=None, token=None) -> Path:
     return configpath
 
 
-def list_jobs(url, token):
+def list_jobs(kbatch_url, token):
     client = httpx.Client()
+    config = load_config()
 
-    token = token or os.environ.get("JUPYTERHUB_API_TOKEN")
+    token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
+    kbatch_url = kbatch_url or os.environ.get("KBATCH_URL") or config["kbatch_url"]
+
+    if not kbatch_url.endswith("/"):
+        kbatch_url += "/"
 
     headers = {
         "Authorization": f"token {token}",
     }
 
-    r = client.get(urllib.parse.urljoin(url, "jobs/"), headers=headers)
+    r = client.get(urllib.parse.urljoin(kbatch_url, "jobs/"), headers=headers)
     if r.status_code >= 201:
         raise ValueError(r.json())
 

@@ -63,7 +63,9 @@ class Job(models.Model):
         batch_api = backend.make_api()
 
         logger.info("Submitting job %d", self.pk)
-        resp = backend.submit_job(batch_api, k8s_job)  # TODO: async
+        resp = backend.submit_job(
+            batch_api, k8s_job, namespace=k8s_config.namespace
+        )  # TODO: async
         logger.debug("resp %s", resp)
 
         return result

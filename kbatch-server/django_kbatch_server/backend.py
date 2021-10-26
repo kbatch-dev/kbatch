@@ -185,9 +185,9 @@ def make_api() -> client.BatchV1Api:
     return batch_api
 
 
-def submit_job(api: client.BatchV1Api, job: V1Job):
+def submit_job(api: client.BatchV1Api, job: V1Job, namespace="default"):
     # TODO: maybe make this an async generator of statuses.
-    response = api.create_namespaced_job(namespace="default", body=job)
+    response = api.create_namespaced_job(namespace=namespace, body=job)
     return response
 
 

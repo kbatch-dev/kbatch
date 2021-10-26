@@ -17,4 +17,7 @@ urlpatterns = [
 
 
 if settings.JUPYTERHUB_SERVICE_PREFIX:
-    urlpatterns.append(path("", views.root))
+    # ignoring this:
+    # kbatch-server/kbatch_server/urls.py:20: error: Argument 1 to "append" of "list"
+    # has incompatible type "URLPattern"; expected "URLResolver"
+    urlpatterns.append(path("", views.root))  # type: ignore
