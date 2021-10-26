@@ -37,16 +37,18 @@ def list(kbatch_url, token):
 
 
 @job.command()
-@click.option("--name", help="File to execute.")
-@click.option("--description", help="File to execute.")
-@click.option("--image", help="File to execute.")
-@click.option("--command", help="File to execute.")
-@click.option("--args", help="File to execute.")
+@click.option("--name", help="Job name.")
+@click.option("--description", help="A description of the job, optional.")
+@click.option("--image", help="Container image to use to execute job.")
+@click.option("--command", help="Command to execute.")
+@click.option("--args", help="Arguments to pass to the command.")
 @click.option("--kbatch-url", help="URL to the kbatch server.")
-@click.option("--token", help="File to execute.")
-@click.option("--env", help="File to execute.")
+@click.option("--token", help="JupyterHub API token.")
+@click.option("--env", help="JSON mapping of environment variables for the job.")
 @click.option(
-    "-c", "--code", help="Local directory of source-code to make available to the job."
+    "-c",
+    "--code",
+    help="Local file or directory of source-code to make available to the job.",
 )
 @click.option("-f", "--file", help="Configuration file.")
 def submit(file, code, name, description, image, command, args, kbatch_url, token, env):

@@ -19,8 +19,7 @@ class JobSpec:
     Parameters
     ----------
     code: str
-        Relative path to a file or directory to upload and make available
-        to the job.
+        Relative path to a file or directory to upload and make available to the job.
     command : str
         The (perhaps multiline) command to run. This can rely on the file or directory
         `code` being available.
@@ -32,7 +31,6 @@ class JobSpec:
     """
 
     code: Optional[str] = None
-
     args: Optional[List[str]] = None
     command: Optional[str] = None
     image: Optional[str] = None
