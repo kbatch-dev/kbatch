@@ -181,6 +181,7 @@ def submit_job(
         json=data,
         headers=headers,
     )
-    assert r.status_code == 201
+    if r.status_code != 201:
+        raise ValueError(r.json())
 
     return r.json()

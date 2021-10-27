@@ -1,0 +1,6 @@
+name: "ndvi-job"
+code: "ndvi-job.py"
+args:
+  - "python"
+  - "ndvi-job.py"
+image: "mcr.microsoft.com/planetary-computer/python:latest"
