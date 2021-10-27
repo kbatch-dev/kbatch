@@ -68,6 +68,8 @@ def submit(file, code, name, description, image, command, args, kbatch_url, toke
         data["description"] = description
     if image is not None:
         data["image"] = image
+    if args is not None:
+        data["args"] = args
     if command is not None:
         data["command"] = command
     if code is not None:

@@ -42,6 +42,7 @@ class JobSpec:
         if include_code:
             raise ValueError
         return {
+            "args": self.args,
             "command": self.command,
             "image": self.image,
             "name": self.name,
