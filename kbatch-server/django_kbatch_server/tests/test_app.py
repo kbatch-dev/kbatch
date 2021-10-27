@@ -88,6 +88,7 @@ class TestKBatch:
         assert result.pop("user") == USERNAME
         assert result.pop("upload") is None
         assert result.pop("env") is None
+        assert result.pop("args") is None
         url = result.pop("url")
         assert url.startswith("http://testserver/jobs/")
 
@@ -179,3 +180,28 @@ class TestKBatch:
         assert response.json() == {
             "file": ["The submitted file must be a ZIP archive."]
         }
+
+    def test_post_args(self):
+        job_name = f"test-job-{uuid.uuid1()}"
+        data = {
+            "command": ["/bin/sh"],
+            "image": "alpine",
+            "name": job_name,
+            "description": "My job!",
+            "args": ["python"],
+        }
+        response = client.post(
+            "/jobs/",
+            data,
+            format="json",
+            **AUTH_HEADER,
+        )
+        assert response.status_code == 201
+        result = response.json()
+        assert result.pop("user") == USERNAME
+        assert result.pop("upload") is None
+        assert result.pop("env") is None
+        url = result.pop("url")
+        assert url.startswith("http://testserver/jobs/")
+
+        assert result == data

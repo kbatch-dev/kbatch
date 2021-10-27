@@ -1,0 +1,158 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    kbatch.jupyter.org/username: taugspurger@microsoft.com
+  creationTimestamp: "2021-10-27T00:41:05Z"
+  generateName: ndvi-job-3-
+  labels:
+    controller-uid: fd8c9cce-714d-449b-a5b4-3e2d6549ef4b
+    job-name: ndvi-job-3
+    kbatch.jupyter.org/username: taugspurger-40microsoft-2Ecom
+  name: ndvi-job-3-zs2hk
+  namespace: staging
+  ownerReferences:
+  - apiVersion: batch/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: Job
+    name: ndvi-job-3
+    uid: fd8c9cce-714d-449b-a5b4-3e2d6549ef4b
+  resourceVersion: "15487635"
+  uid: 73350549-b00e-4c17-a9aa-833e55ace459
+spec:
+  containers:
+  - env:
+    - name: SAS_TOKEN
+    image: mcr.microsoft.com/planetary-computer/python:latest
+    imagePullPolicy: Always
+    name: job
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /code
+      name: file-volume
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-494wm
+      readOnly: true
+    workingDir: /code
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  initContainers:
+  - args:
+    - -c
+    - wget "https://kbatchtest.blob.core.windows.net/kbatch/code_dzLqBA2.zip?sp=racwdl&st=2021-10-22T14%3A01%3A27Z&se=2021-10-29T22%3A01%3A27Z&spr=https&sv=2020-08-04&sr=c&sig=UuUrzMrks%2F18zSdaZfhmxlDtRkCFHuK%2FSA0SSMRLCUM%3D"
+      -O /code_dzLqBA2.zip; unzip -d /code/ /code_dzLqBA2.zip
+    command:
+    - /bin/sh
+    image: inutano/wget:1.20.3-r1
+    imagePullPolicy: IfNotPresent
+    name: ndvi-job-3-init
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /code
+      name: file-volume
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-494wm
+      readOnly: true
+  nodeName: aks-core-27180469-vmss000000
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Never
+  schedulerName: default-scheduler
+  securityContext: {}
+  serviceAccount: default
+  serviceAccountName: default
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+  - emptyDir: {}
+    name: file-volume
+  - name: kube-api-access-494wm
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2021-10-27T00:41:08Z"
+    reason: PodCompleted
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2021-10-27T00:41:12Z"
+    reason: PodCompleted
+    status: "False"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2021-10-27T00:41:12Z"
+    reason: PodCompleted
+    status: "False"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2021-10-27T00:41:05Z"
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - containerID: containerd://dc793e6b08e65d94cd3d633b9fd47899d7b6fa0ace3dc89a02080343946714d7
+    image: pcccr.azurecr.io/public/planetary-computer/python:2021.10.01.11
+    imageID: pcccr.azurecr.io/public/planetary-computer/python@sha256:f7b4f9408f045dcba233411076a3562d5dc4ec44db8bb61a5e7d354b4b3c0e8d
+    lastState: {}
+    name: job
+    ready: false
+    restartCount: 0
+    started: false
+    state:
+      terminated:
+        containerID: containerd://dc793e6b08e65d94cd3d633b9fd47899d7b6fa0ace3dc89a02080343946714d7
+        exitCode: 0
+        finishedAt: "2021-10-27T00:41:11Z"
+        reason: Completed
+        startedAt: "2021-10-27T00:41:09Z"
+  hostIP: 10.1.0.4
+  initContainerStatuses:
+  - containerID: containerd://2aaf382b90970ad8d8a01f42fa6950e9d7b44627c4410439bb75e4401a8c819f
+    image: docker.io/inutano/wget:1.20.3-r1
+    imageID: docker.io/inutano/wget@sha256:b806ccdd9a5445bb46e50f0fc7e0c88f9d9ba6286e885d4502cc353a3f03fb38
+    lastState: {}
+    name: ndvi-job-3-init
+    ready: true
+    restartCount: 0
+    state:
+      terminated:
+        containerID: containerd://2aaf382b90970ad8d8a01f42fa6950e9d7b44627c4410439bb75e4401a8c819f
+        exitCode: 0
+        finishedAt: "2021-10-27T00:41:07Z"
+        reason: Completed
+        startedAt: "2021-10-27T00:41:07Z"
+  phase: Succeeded
+  podIP: 10.244.0.54
+  podIPs:
+  - ip: 10.244.0.54
+  qosClass: BestEffort
+  startTime: "2021-10-27T00:41:05Z"

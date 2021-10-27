@@ -33,6 +33,7 @@ class JobSerializer(serializers.HyperlinkedModelSerializer):
         model = Job
         fields = [
             "url",
+            "args",
             "command",
             "image",
             "name",

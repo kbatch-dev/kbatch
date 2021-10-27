@@ -84,3 +84,20 @@ def test_node_tolerations(model_job, toleration):
             key="hub.jupyter.org/dedicated", value="user", effect="NoSchedule"
         )
     ]
+
+
+def test_command_args(model_user):
+    k8s_config = types_.KubernetesConfig()
+    model_job = types_.Job(
+        id=1,
+        name="name",
+        command=["/bin/sh"],
+        args=["-c", "python"],
+        image="alpine",
+        user=model_user,
+    )
+    job = backend.make_job(model_job, k8s_config)
+
+    job_container = job.spec.template.spec.containers[0]
+    assert job_container.args == ["-c", "python"]
+    assert job_container.command == ["/bin/sh"]
