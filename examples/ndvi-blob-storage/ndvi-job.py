@@ -51,12 +51,16 @@ def main():
     fig.savefig(img)
     img.seek(0)
 
-    container_client.upload_blob(f"output/ndvi/{item.id}/image.png", img)
+    container_client.upload_blob(
+        f"output/ndvi/{item.id}/image.png", img, overwrite=True
+    )
 
     print("creating tif")
     ndvi.rio.to_raster("ndvi.tif", driver="COG")
     with open("ndvi.tif", "rb") as f:
-        container_client.upload_blob(f"output/ndvi/{item.id}/image.tif", f)
+        container_client.upload_blob(
+            f"output/ndvi/{item.id}/image.tif", f, overwrite=True
+        )
 
     print("finished")
 
