@@ -166,7 +166,13 @@ KBATCH_JOB_CPU_GUARANTEE = env("KBATCH_JOB_CPU_GUARANTEE", default=None)
 KBATCH_JOB_CPU_LIMIT = env("KBATCH_JOB_CPU_LIMIT", default=None)
 KBATCH_JOB_MEM_GUARANTEE = env("KBATCH_JOB_MEM_GUARANTEE", default=None)
 KBATCH_JOB_MEM_LIMIT = env("KBATCH_JOB_MEM_LIMIT", default=None)
-KBATCH_JOB_TOLERATIONS = env.list("KBATCH_JOB_TOLERATIONS", default=None)
+KBATCH_JOB_TOLERATIONS = env.list(
+    "KBATCH_JOB_TOLERATIONS",
+    default=[
+        "hub.jupyter.org/dedicated=user",
+        "hub.jupyter.org_dedicated=user",
+    ],
+)
 KBATCH_JOB_LABELS = None
 KBATCH_JOB_ANNOTATIONS = None
 KBATCH_JOB_EXTRA_RESOURCE_LIMITS = None
