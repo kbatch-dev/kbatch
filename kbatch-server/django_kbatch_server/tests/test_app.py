@@ -87,7 +87,7 @@ class TestKBatch:
         result = response.json()
         assert result.pop("user") == USERNAME
         assert result.pop("upload") is None
-        assert result.pop("env") is None
+        assert result.pop("env") == {"JUPYTERHUB_API_TOKEN": "abc"}
         assert result.pop("args") is None
         url = result.pop("url")
         assert url.startswith("http://testserver/jobs/")
@@ -152,7 +152,7 @@ class TestKBatch:
         result = response.json()
 
         assert result.pop("command") is None
-        assert result.pop("env") is None
+        assert result.pop("env") == {"JUPYTERHUB_API_TOKEN": "abc"}
         assert result.pop("image") == "alpine"
         assert result.pop("upload")
         assert result.pop("url")
@@ -200,7 +200,7 @@ class TestKBatch:
         result = response.json()
         assert result.pop("user") == USERNAME
         assert result.pop("upload") is None
-        assert result.pop("env") is None
+        assert result.pop("env") == {"JUPYTERHUB_API_TOKEN": "abc"}
         url = result.pop("url")
         assert url.startswith("http://testserver/jobs/")
 

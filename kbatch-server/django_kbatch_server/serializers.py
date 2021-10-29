@@ -77,6 +77,11 @@ class JobSerializer(serializers.HyperlinkedModelSerializer):
 
             validated_data["upload"] = upload
 
+        jupyterhub_api_token = validated_data.pop("jupyterhub_api_token", None)
+        if jupyterhub_api_token:
+            validated_data.setdefault("env", {})
+            validated_data["env"]["JUPYTERHUB_API_TOKEN"] = jupyterhub_api_token
+
         result = super().create(validated_data)
         return result
 

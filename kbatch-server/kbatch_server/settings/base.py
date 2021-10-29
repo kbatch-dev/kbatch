@@ -169,14 +169,15 @@ KBATCH_JOB_MEM_LIMIT = env("KBATCH_JOB_MEM_LIMIT", default=None)
 KBATCH_JOB_TOLERATIONS = env.list(
     "KBATCH_JOB_TOLERATIONS",
     default=[
-        "hub.jupyter.org/dedicated=user",
-        "hub.jupyter.org_dedicated=user",
+        "hub.jupyter.org/dedicated=user:NoSchedule",
+        "hub.jupyter.org_dedicated=user:NoSchedule",
     ],
 )
 KBATCH_JOB_LABELS = None
 KBATCH_JOB_ANNOTATIONS = None
 KBATCH_JOB_EXTRA_RESOURCE_LIMITS = None
 KBATCH_JOB_EXTRA_RESOURCE_GUARANTEES = None
+KBATCH_DEFAULT_ENV = env.dict("KBATCH_DEFAULT_ENV", default={})
 
 DEFAULT_FILE_STORAGE = env(
     "DEFAULT_FILE_STORAGE", default="django.core.files.storage.FileSystemStorage"

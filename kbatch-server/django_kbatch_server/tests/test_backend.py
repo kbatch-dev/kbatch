@@ -45,10 +45,6 @@ def test_resource_limits(model_job):
     "env",
     [
         {"KEY1": "VALUE1", "KEY2": "VALUE2"},
-        [
-            kubernetes.client.V1EnvVar(name="KEY1", value="VALUE1"),
-            kubernetes.client.V1EnvVar(name="KEY2", value="VALUE2"),
-        ],
     ],
 )
 def test_env(model_user, env):

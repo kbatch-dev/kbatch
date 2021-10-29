@@ -19,7 +19,8 @@ class JobViewSet(viewsets.ModelViewSet):
         return Job.objects.filter(user=user).order_by("id")
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        # request.auth seems to come from DRF
+        serializer.save(user=self.request.user, jupyterhub_api_token=self.request.auth)
 
 
 class UploadViewSet(viewsets.ModelViewSet):

@@ -1,4 +1,5 @@
 import logging
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
@@ -55,6 +56,17 @@ class Job(models.Model):
         result = super().save(*args, **kwargs)
 
         job = types_.Job.from_model(self)
+
+        # TODO: Clean up all this env handling. model.save is not the right place for it
+        # Figure out if we want to inject this env before or after saving
+        # Ideally consolidate with setting JUPYTERHUB_API_TOKEN, which needs the request
+        # object post-auth.
+        # TODO: test environment configuration. It's currently falling through the
+        # app / backend testing gap
+        job.inject_default_env(settings.KBATCH_DEFAULT_ENV)
+        job.env["JUPYTER_IMAGE_SPEC"] = job.image
+        job.env["JUPYTER_IMAGE"] = job.image
+
         k8s_config = types_.KubernetesConfig.from_settings()
 
         k8s_job = backend.make_job(job=job, k8s_config=k8s_config)

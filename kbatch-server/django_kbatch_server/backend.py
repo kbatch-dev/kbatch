@@ -4,7 +4,6 @@ Build and submit Jobs to Kubernetes.
 This is used only by the kbatch backend. kbatch users do not have access to the Kubernetes API.
 """
 import asyncio
-import collections.abc
 import functools
 import pathlib
 import string
@@ -85,15 +84,16 @@ def make_job(
     file_volume_mount = V1VolumeMount(mount_path="/code", name="file-volume")
     file_volume = V1Volume(name="file-volume", empty_dir={})
 
-    if isinstance(env, collections.abc.Mapping):
-        env = [V1EnvVar(name=k, value=v) for k, v in env.items()]
+    env_vars: Optional[List[V1EnvVar]] = None
+    if env:
+        env_vars = [V1EnvVar(name=k, value=v) for k, v in env.items()]
 
     container = V1Container(
         args=args,
         command=command,
         image=image,
         name="job",
-        env=env,
+        env=env_vars,
         volume_mounts=[file_volume_mount],
         resources=V1ResourceRequirements(),
         working_dir="/code",

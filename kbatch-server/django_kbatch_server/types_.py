@@ -23,7 +23,7 @@ class Upload:
         return cls(file=upload.file)
 
 
-@dataclass(frozen=True)
+@dataclass()
 class Job:
     user: User
     name: str
@@ -31,7 +31,7 @@ class Job:
     image: str
     command: Optional[List[str]]
     args: Optional[List[str]] = None
-    env: Optional[List[Dict[str, str]]] = None
+    env: Optional[Dict[str, str]] = None
     upload: Optional[Upload] = None
 
     @classmethod
@@ -46,6 +46,14 @@ class Job:
             env=job.env,
             upload=Upload.from_model(job.upload) if job.upload else None,
         )
+
+    def inject_default_env(self, default_env: Dict[str, str]) -> None:
+        """
+        Inserts the default environment into self.env, with precedence given to self.env.
+
+        Mutates `self` inplace.
+        """
+        self.env = {**default_env, **(self.env or {})}
 
 
 @dataclass(frozen=True)
