@@ -2,7 +2,7 @@ import os
 import zipfile
 import shutil
 import tempfile
-from dataclasses import dataclass, field
+import dataclasses
 import json
 from pathlib import Path
 from typing import Optional, List, Dict
@@ -11,7 +11,7 @@ import httpx
 import urllib.parse
 
 
-@dataclass
+@dataclasses.dataclass
 class JobSpec:
     """
     Specification for a job.
@@ -36,19 +36,7 @@ class JobSpec:
     image: Optional[str] = None
     name: Optional[str] = None
     description: Optional[str] = None
-    env: Dict[str, str] = field(default_factory=dict)
-
-    def to_json(self, include_code=False):
-        if include_code:
-            raise ValueError
-        return {
-            "args": self.args,
-            "command": self.command,
-            "image": self.image,
-            "name": self.name,
-            "description": self.description,
-            "env": self.env,
-        }
+    env: Dict[str, str] = dataclasses.field(default_factory=dict)
 
 
 def config_path() -> Path:
@@ -154,17 +142,18 @@ def submit_job(
         "Authorization": f"token {token}",
     }
 
-    data = spec.to_json()
+    data = dataclasses.asdict(spec)
+    code = data.pop("code")
 
-    if spec.code:
+    if code:
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "code"
-            if Path(spec.code).is_dir():
-                archive = shutil.make_archive(p, "zip", spec.code)
+            if Path(code).is_dir():
+                archive = shutil.make_archive(p, "zip", code)
             else:
                 archive = str(p.with_suffix(".zip"))
                 with zipfile.ZipFile(archive, mode="w") as zf:
-                    zf.write(spec.code)
+                    zf.write(code)
 
             r = client.post(
                 urllib.parse.urljoin(kbatch_url, "uploads/"),
