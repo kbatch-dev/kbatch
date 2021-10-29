@@ -6,7 +6,6 @@ import os
 import pystac_client
 import stackstac
 import planetary_computer
-import time
 
 import azure.storage.blob
 import rioxarray  # noqa
@@ -14,14 +13,14 @@ import matplotlib.pyplot as plt
 
 
 def main():
-    print("searching...")
+    print("Starting job")
     catalog = pystac_client.Client.open(
         "https://planetarycomputer.microsoft.com/api/stac/v1"
     )
-    items = catalog.search(collections=["sentinel-2-l2a"], limit=1)
+    items = catalog.search(
+        collections=["sentinel-2-l2a"], limit=1, query={"eo:cloud_cover": {"lt": 10}}
+    )
     item = next(items.get_items())
-
-    print(f"found {item.id} from {item.datetime:%Y-%m-%dT%H:%M:%S}")
 
     signed_item = planetary_computer.sign(item)
     ds = stackstac.stack(
@@ -31,10 +30,7 @@ def main():
     nir = ds.sel(band="B08")
 
     print("computing ndvi...")
-    t0 = time.time()
     ndvi = ((nir - red) / (red + nir)).compute()
-    t1 = time.time()
-    print(f"computed ndvi in {t1 - t0:0.2f}s")
 
     container_client = azure.storage.blob.ContainerClient(
         "https://kbatchtest.blob.core.windows.net",

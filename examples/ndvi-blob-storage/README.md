@@ -1,10 +1,12 @@
 # ndvi
 
+This examples computes NDVI on the most-recent Sentinel-2 Level 2A image from the Planetary Computer's STAC API.
+The NDVI layer is saved as a png and COG in Azure Blob Storage.
 
 ```
 $ kbatch job submit --name=ndvi-job \
     --image=mcr.microsoft.com/planetary-computer/python:latest \
-    --command='["python", "ndvi-job.py"]' \
+    --args='["python", "ndvi-job.py"]' \
     --code="ndvi-job.py" \
     --env="{\"SAS_TOKEN\": \"$SAS_TOKEN\"}"
 ```

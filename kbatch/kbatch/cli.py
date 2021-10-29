@@ -33,7 +33,7 @@ def job():
 @click.option("--token", help="File to execute.")
 def list(kbatch_url, token):
     result = _core.list_jobs(kbatch_url, token)
-    rich.print(result)
+    rich.print_json(data=result)
 
 
 @job.command()
@@ -84,4 +84,4 @@ def submit(file, code, name, description, image, command, args, kbatch_url, toke
         kbatch_url=kbatch_url,
         token=token,
     )
-    rich.print(result)
+    rich.print_json(data=result)
