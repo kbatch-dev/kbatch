@@ -1,0 +1,6 @@
+fastapi
+httpx
+kubernetes
+uvicorn[standard]
+jupyterhub
+escapism

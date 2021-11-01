@@ -12,15 +12,16 @@ An asynchronous / batch complement to what JupyterHub already provides.
 - **Simplicity of use**: Ideally users don't need to adapt their script / notebook / unit of work to the job system.
 - **Integration with JupyterHub**: Runs as a JupyterHub services, uses JupyterHub for auth, etc.
 - **Runs on Kubernetes**: mainly for the simplicity of implementation, and also that's my primary use-case.
-- **Users do not have access to the Kubernetes API**: partly because if users need to know about Kubernetes then we've failed, and partly for security.
 
 Together, these rule some great tools like [Argo workflows](https://argoproj.github.io/workflows), [Ploomber](https://github.com/ploomber/ploomber), [Elyra](https://github.com/elyra-ai/elyra). So we write our own (hopefully simple) implementation.
 
 ## Architecture
 
-Because end-users don't have access to the Kubernetes API, we have a client/server model. Users make API requests to the server to submit / list / show jobs.
+We don't want to *directly* expose the Kubernetes API to the user. At the same time, we don't want a complicated deployment with its own state to maintain. We balance these competing interests by writing a *very* simple proxy that sits between the users and the Kubernetes API. This proxy is responsible for
 
-The server is split into two parts: a frontend that handles requests, and a backend that submits them to Kubernetes.
+- Authenticating users (typically by checking the `Bearer` token with a call to the JupyterHub API)
+- Authorizing the command (essentially, making sure that the API call only touches objects in the user's namespace)
+- Submitting the call to the Kubernetes API, returning the results
 
 ## Usage (hypothetical)
 
@@ -79,34 +80,4 @@ When you job starts executing, its working directory is `/code`. So you can safe
 
 ## Development setup
 
-This setup assumes you have docker installed and have cloned the repository.
-
-```
-$ # from the root of the git repo
-$ cd kbatch-server/docker-local
-$ docker-compose up
-```
-
-That starts up JupyterHub and kbatch-server. Next, generate a token by visiting http://localhost:8000/hub/token, using any username / password, and requesting a token. We'll use that in the next section.
-
-Open up a new terminal, create and activate some kind of virtual environment, and install the dependencies
-
-```
-$ cd kbatch
-$ python -m pip install -e .
-```
-
-Now you should have the `kbatch` CLI on your path.
-
-```
-$ kbatch configure --kbatch-url=http://localhost:8050/services/kbatch --jupyterhub-url=http://localhost:8000/hub/api --token="<token from earlier>
-Wrote config to <config-dir>/kbatch/config.json
-```
-
-Now you can submit jobs.
-
-```
-kbatch job submit --name=my-job \
-    --image=mcr.microsoft.com/planetary-computer/python:latest \
-    --command='["python", "-c", "print(1)"]'
-```
+...

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -xe
  
-pushd kbatch-server
+pushd kbatch-proxy
 python -m pip install -e .[test]
 popd
 

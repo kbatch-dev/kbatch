@@ -6,6 +6,7 @@ import rich
 import yaml
 
 from . import _core
+from ._types import Job
 
 
 @click.group()
@@ -26,6 +27,15 @@ def configure(jupyterhub_url, kbatch_url, token):
 @cli.group()
 def job():
     pass
+
+
+@job.command()
+@click.option("--kbatch-url", help="URL to the kbatch server.")
+@click.option("--token", help="File to execute.")
+@click.argument("job_name")
+def show(job_name, kbatch_url, token):
+    result = _core.show_job(job_name, kbatch_url, token)
+    rich.print_json(data=result)
 
 
 @job.command()
@@ -75,12 +85,10 @@ def submit(file, code, name, description, image, command, args, kbatch_url, toke
     if code is not None:
         data["code"] = code
 
-    spec = _core.JobSpec(**data)
-    if env:
-        spec.env.update(env)
+    job = Job(**data)
 
     result = _core.submit_job(
-        spec=spec,
+        job,
         kbatch_url=kbatch_url,
         token=token,
     )

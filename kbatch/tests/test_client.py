@@ -36,7 +36,7 @@ def test_submit_script(respx_mock):
     respx_mock.post("https://example.org/kbatch/uploads/").mock(side_effect=mock_upload)
     respx_mock.post("https://example.org/kbatch/jobs/").mock(side_effect=mock_job)
 
-    spec = kbatch.JobSpec(
+    spec = kbatch.Job(
         name="my-job",
         args=None,
         code=HERE / "examples/file/main.py",
