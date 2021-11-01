@@ -12,15 +12,16 @@ An asynchronous / batch complement to what JupyterHub already provides.
 - **Simplicity of use**: Ideally users don't need to adapt their script / notebook / unit of work to the job system.
 - **Integration with JupyterHub**: Runs as a JupyterHub services, uses JupyterHub for auth, etc.
 - **Runs on Kubernetes**: mainly for the simplicity of implementation, and also that's my primary use-case.
-- **Users do not have access to the Kubernetes API**: partly because if users need to know about Kubernetes then we've failed, and partly for security.
 
 Together, these rule some great tools like [Argo workflows](https://argoproj.github.io/workflows), [Ploomber](https://github.com/ploomber/ploomber), [Elyra](https://github.com/elyra-ai/elyra). So we write our own (hopefully simple) implementation.
 
 ## Architecture
 
-Because end-users don't have access to the Kubernetes API, we have a client/server model. Users make API requests to the server to submit / list / show jobs.
+We don't want to *directly* expose the Kubernetes API to the user. At the same time, we don't want a complicated deployment with its own state to maintain. We balance these competing interests by writing a *very* simple proxy that sits between the users and the Kubernetes API. This proxy is responsible for
 
-The server is split into two parts: a frontend that handles requests, and a backend that submits them to Kubernetes.
+- Authenticating users (typically by checking the `Bearer` token with a call to the JupyterHub API)
+- Authorizing the command (essentially, making sure that the API call only touches objects in the user's namespace)
+- Submitting the call to the Kubernetes API, returning the results
 
 ## Usage (hypothetical)
 
