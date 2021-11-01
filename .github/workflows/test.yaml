@@ -37,7 +37,7 @@ jobs:
 
       - name: Run kbatch-server tests
         run: |
-          cd kbatch-server
+          cd kbatch-proxy
           pytest -v
 
       - name: Run kbatch-client tests
