@@ -1,0 +1,26 @@
+version: "3.1"
+
+services:
+  hub:
+    image: jupyterhub/jupyterhub
+    volumes:
+      - .:/srv/jupyterhub
+    ports:
+      - 8000:8000
+
+  kbatch-proxy:
+    build:
+      context: ../
+      dockerfile: ./docker/Dockerfile
+    image: kbatch_local_image
+    # volumes:
+      # - ../..:/code
+    ports:
+      - 8050:80
+    # env_file:
+    #   - ../../.envs/.local/.django
+    environment:
+      JUPYTERHUB_API_TOKEN: super-secret
+      JUPYTERHUB_API_URL: http://hub:8000/hub/api
+      JUPYTERHUB_HOST: http://127.0.0.1:8000
+      # JUPTYERHUB_SERVICE_PREFIX: services/kbatch/

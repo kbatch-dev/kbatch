@@ -1,42 +1,12 @@
 import os
-import zipfile
-import shutil
-import tempfile
-import dataclasses
 import json
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import Optional, Dict
 
 import httpx
 import urllib.parse
 
-
-@dataclasses.dataclass
-class JobSpec:
-    """
-    Specification for a job.
-
-    Parameters
-    ----------
-    code: str
-        Relative path to a file or directory to upload and make available to the job.
-    command : str
-        The (perhaps multiline) command to run. This can rely on the file or directory
-        `code` being available.
-    image : str
-    name : str
-    description : str
-    env : Mapping[str, str]
-        Environment variables to make available.
-    """
-
-    code: Optional[str] = None
-    args: Optional[List[str]] = None
-    command: Optional[str] = None
-    image: Optional[str] = None
-    name: Optional[str] = None
-    description: Optional[str] = None
-    env: Dict[str, str] = dataclasses.field(default_factory=dict)
+from ._types import Job
 
 
 def config_path() -> Path:
@@ -102,6 +72,29 @@ def configure(jupyterhub_url=None, kbatch_url=None, token=None) -> Path:
     return configpath
 
 
+def show_job(job_name, kbatch_url, token):
+    client = httpx.Client()
+    config = load_config()
+
+    token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
+    kbatch_url = kbatch_url or os.environ.get("KBATCH_URL") or config["kbatch_url"]
+
+    if not kbatch_url.endswith("/"):
+        kbatch_url += "/"
+
+    headers = {
+        "Authorization": f"token {token}",
+    }
+
+    r = client.get(
+        urllib.parse.urljoin(kbatch_url, f"jobs/{job_name}"), headers=headers
+    )
+    if r.status_code >= 399:
+        raise ValueError(r.json())
+
+    return r.json()
+
+
 def list_jobs(kbatch_url, token):
     client = httpx.Client()
     config = load_config()
@@ -124,7 +117,7 @@ def list_jobs(kbatch_url, token):
 
 
 def submit_job(
-    spec: JobSpec,
+    job: Job,
     *,
     kbatch_url: Optional[str] = None,
     token: Optional[str] = None,
@@ -141,36 +134,38 @@ def submit_job(
     headers = {
         "Authorization": f"token {token}",
     }
+    data = job.to_kubernetes().to_dict()
+    data = {"job": data}  # TODO: figure out if we should nest this or not. I think not.
 
-    data = dataclasses.asdict(spec)
-    code = data.pop("code")
+    # data = dataclasses.asdict(spec)
+    # code = data.pop("code")
 
-    if code:
-        with tempfile.TemporaryDirectory() as d:
-            p = Path(d) / "code"
-            if Path(code).is_dir():
-                archive = shutil.make_archive(p, "zip", code)
-            else:
-                archive = str(p.with_suffix(".zip"))
-                with zipfile.ZipFile(archive, mode="w") as zf:
-                    zf.write(code)
+    # if code:
+    #     with tempfile.TemporaryDirectory() as d:
+    #         p = Path(d) / "code"
+    #         if Path(code).is_dir():
+    #             archive = shutil.make_archive(p, "zip", code)
+    #         else:
+    #             archive = str(p.with_suffix(".zip"))
+    #             with zipfile.ZipFile(archive, mode="w") as zf:
+    #                 zf.write(code)
 
-            r = client.post(
-                urllib.parse.urljoin(kbatch_url, "uploads/"),
-                files={"file": open(archive, "rb")},
-                headers=headers,
-            )
-            if r.status_code > 201:
-                raise ValueError(r.json())
+    #         r = client.post(
+    #             urllib.parse.urljoin(kbatch_url, "uploads/"),
+    #             files={"file": open(archive, "rb")},
+    #             headers=headers,
+    #         )
+    #         if r.status_code > 201:
+    #             raise ValueError(r.json())
 
-        data["upload"] = r.json()["url"]
+    #     data["upload"] = r.json()["url"]
 
     r = client.post(
         urllib.parse.urljoin(kbatch_url, "jobs/"),
         json=data,
         headers=headers,
     )
-    if r.status_code != 201:
+    if r.status_code >= 400:
         raise ValueError(r.json())
 
     return r.json()

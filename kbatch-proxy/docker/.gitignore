@@ -1,0 +1,3 @@
+*.pid
+*.sqlite
+jupyterhub_cookie_secret
