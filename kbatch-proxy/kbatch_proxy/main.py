@@ -1,7 +1,7 @@
 import os
 import functools
 import logging
-from typing import List
+from typing import List, Optional, Tuple
 
 from pydantic import BaseModel, BaseSettings
 import jupyterhub.services.auth
@@ -86,11 +86,10 @@ async def get_current_user(request: Request) -> User:
 
 
 @functools.lru_cache
-def get_k8s_api() -> kubernetes.client.BatchV1Api:
+def get_k8s_api() -> Tuple[kubernetes.client.CoreV1Api, kubernetes.client.BatchV1Api]:
     kubernetes.config.load_config()
 
-    batch_api = kubernetes.client.BatchV1Api()
-    return batch_api
+    return kubernetes.client.CoreV1Api(), kubernetes.client.BatchV1Api()
 
 
 # ----------------------------------------------------------------------------
@@ -113,19 +112,51 @@ async def read_jobs(user: User = Depends(get_current_user)):
 
 @app.post("/jobs/")
 async def create_job(request: Request, user: User = Depends(get_current_user)):
-    batch_api = get_k8s_api()
+    api, batch_api = get_k8s_api()
 
     data = await request.json()
-    d = data["job"]
+    job_data = data["job"]
     job: kubernetes.client.models.V1Job = utils.parse(
-        d, model=kubernetes.client.models.V1Job
+        job_data, model=kubernetes.client.models.V1Job
     )
 
-    patch.patch_job(job, annotations={}, labels={}, username=user.name)
+    code_data = data.get("code", None)
+    if code_data:
+        # The contents were base64encoded prior to being JSON serialized
+        # we have to decode it *after* submitting things to the API server...
+        # This is not great.
+        # code_data["binary_data"]["code"] = base64.b64decode(code_data["binary_data"]["code"])
+        config_map: Optional[kubernetes.client.models.V1ConfigMap] = utils.parse(
+            code_data, model=kubernetes.client.models.V1ConfigMap
+        )
+    else:
+        config_map = None
+
+    patch.patch(job, config_map, annotations={}, labels={}, username=user.name)
+
+    # What needs to happen when? We have a few requirements
+    # 1. The code ConfigMap must exist before adding it as a volume (we need a name,
+    #    and k8s requires that)
+    # 2. MAYBE: The Job must exist before adding it as an owner for the ConfigMap
+    #
+    # So I think we're at 3 requests:
+    #
+    # 1. Submit configmap
+    #   - ..
+    # 2. Submit Job
+    # 3. Patch ConfigMap to add Job as the owner
+
+    if config_map:
+        logger.info("Submitting ConfigMap")
+        resp = api.create_namespaced_config_map(
+            namespace=user.namespace, body=config_map
+        )
+        patch.add_submitted_configmap_name(job, resp)
 
     logger.info("Submitting job")
     resp = batch_api.create_namespaced_job(namespace=user.namespace, body=job)
 
+    # TODO: set Job as the owner of the code.
     return resp.to_dict()
 
 

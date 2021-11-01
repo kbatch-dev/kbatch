@@ -82,13 +82,14 @@ def submit(file, code, name, description, image, command, args, kbatch_url, toke
         data["args"] = args
     if command is not None:
         data["command"] = command
-    if code is not None:
-        data["code"] = code
+
+    code = code or data.pop("code", None)
 
     job = Job(**data)
 
     result = _core.submit_job(
         job,
+        code=code,
         kbatch_url=kbatch_url,
         token=token,
     )
