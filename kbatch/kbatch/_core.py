@@ -18,9 +18,9 @@ def config_path() -> Path:
     return Path(config_home) / "kbatch/config.json"
 
 
-def load_config() -> Dict[str, str]:
+def load_config() -> Dict[str, Optional[str]]:
     p = config_path()
-    config = {"token": None, "kbatch_url": None}
+    config: Dict[str, Optional[str]] = {"token": None, "kbatch_url": None}
     if p.exists():
         with open(config_path()) as f:
             config = json.load(f)
@@ -127,6 +127,9 @@ def submit_job(
     client = httpx.Client()
     token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
     kbatch_url = kbatch_url or os.environ.get("KBATCH_URL") or config["kbatch_url"]
+
+    if kbatch_url is None:
+        raise ValueError(...)
 
     if not kbatch_url.endswith("/"):
         kbatch_url += "/"

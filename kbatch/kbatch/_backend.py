@@ -4,7 +4,7 @@ Build and submit Jobs to Kubernetes.
 This is used only by the kbatch backend. kbatch users do not have access to the Kubernetes API.
 """
 import string
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 from kubernetes.client.models import (
     V1Job,
@@ -58,12 +58,12 @@ def make_job(
     env = job.env
 
     # annotations = annotations or {}
-    annotations = {}
+    annotations: Dict[str, str] = {}
     # TODO: set in proxy
 
     # labels = labels or {}
     # labels = dict(labels)
-    labels = {}
+    labels: Dict[str, str] = {}
 
     # file_volume_mount = V1VolumeMount(mount_path="/code", name="file-volume")
     # file_volume = V1Volume(name="file-volume", empty_dir={})

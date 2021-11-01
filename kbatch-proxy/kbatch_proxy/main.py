@@ -1,7 +1,7 @@
 import os
 import functools
 import logging
-from typing import List, Optional
+from typing import List
 
 from pydantic import BaseModel, BaseSettings
 import jupyterhub.services.auth
@@ -11,10 +11,10 @@ import kubernetes.config
 import kubernetes.client.models
 import rich.traceback
 
-rich.traceback.install()
-
 from . import patch
 from . import utils
+
+rich.traceback.install()
 
 logger = logging.getLogger(__name__)
 
@@ -41,12 +41,11 @@ app = FastAPI()
 
 
 class User(BaseModel):
-    authenticated: bool
-    name: Optional[str]
-    groups: Optional[List[str]]
+    name: str
+    groups: List[str]
 
     @property
-    def namespace(self):
+    def namespace(self) -> str:
         """The Kubernetes namespace for a user."""
         return patch.namespace_for_username(self.name)
 
