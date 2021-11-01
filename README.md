@@ -80,34 +80,4 @@ When you job starts executing, its working directory is `/code`. So you can safe
 
 ## Development setup
 
-This setup assumes you have docker installed and have cloned the repository.
-
-```
-$ # from the root of the git repo
-$ cd kbatch-server/docker-local
-$ docker-compose up
-```
-
-That starts up JupyterHub and kbatch-server. Next, generate a token by visiting http://localhost:8000/hub/token, using any username / password, and requesting a token. We'll use that in the next section.
-
-Open up a new terminal, create and activate some kind of virtual environment, and install the dependencies
-
-```
-$ cd kbatch
-$ python -m pip install -e .
-```
-
-Now you should have the `kbatch` CLI on your path.
-
-```
-$ kbatch configure --kbatch-url=http://localhost:8050/services/kbatch --jupyterhub-url=http://localhost:8000/hub/api --token="<token from earlier>
-Wrote config to <config-dir>/kbatch/config.json
-```
-
-Now you can submit jobs.
-
-```
-kbatch job submit --name=my-job \
-    --image=mcr.microsoft.com/planetary-computer/python:latest \
-    --command='["python", "-c", "print(1)"]'
-```
+...
