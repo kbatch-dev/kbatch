@@ -151,13 +151,24 @@ async def create_job(request: Request, user: User = Depends(get_current_user)):
 
     if config_map:
         logger.info("Submitting ConfigMap")
-        resp = api.create_namespaced_config_map(
+        config_map = api.create_namespaced_config_map(
             namespace=user.namespace, body=config_map
         )
-        patch.add_submitted_configmap_name(job, resp)
+        patch.add_submitted_configmap_name(job, config_map)
 
     logger.info("Submitting job")
     resp = batch_api.create_namespaced_job(namespace=user.namespace, body=job)
+
+    if config_map:
+        logger.info(
+            "patching configmap %s with owner %s",
+            config_map.metadata.name,
+            resp.metadata.name,
+        )
+        patch.patch_configmap_owner(resp, config_map)
+        api.patch_namespaced_config_map(
+            name=config_map.metadata.name, namespace=user.namespace, body=config_map
+        )
 
     # TODO: set Job as the owner of the code.
     return resp.to_dict()

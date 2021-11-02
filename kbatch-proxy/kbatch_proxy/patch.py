@@ -14,6 +14,7 @@ from kubernetes.client.models import (
     V1Volume,
     V1ConfigMapVolumeSource,
     V1KeyToPath,
+    V1OwnerReference,
 )
 
 
@@ -141,3 +142,18 @@ def add_submitted_configmap_name(job: V1Job, config_map: V1ConfigMap):
     # config_map should be the response from the Kubernetes API server with the
     # submitted name
     job.spec.template.spec.volumes[-2].config_map.name = config_map.metadata.name
+
+
+def patch_configmap_owner(job: V1Job, config_map: V1ConfigMap):
+    if job.metadata.name is None:
+        raise ValueError("job must have a name before it can be set as an owner")
+    assert job.metadata.name is not None
+
+    config_map.metadata.owner_references = [
+        V1OwnerReference(
+            api_version="api/v1",
+            kind="Job",
+            name=job.metadata.name,
+            uid=job.metadata.uid,
+        )
+    ]
