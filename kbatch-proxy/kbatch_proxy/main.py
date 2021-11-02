@@ -98,15 +98,15 @@ def get_k8s_api() -> Tuple[kubernetes.client.CoreV1Api, kubernetes.client.BatchV
 
 @app.get("/jobs/{job_name}")
 async def read_job(job_name: str, user: User = Depends(get_current_user)):
-    api = get_k8s_api()
-    result = api.read_namespaced_job(job_name, user.namespace)
+    _, batch_api = get_k8s_api()
+    result = batch_api.read_namespaced_job(job_name, user.namespace)
     return result.to_dict()
 
 
 @app.get("/jobs/")
 async def read_jobs(user: User = Depends(get_current_user)):
-    api = get_k8s_api()
-    result = api.list_namespaced_job(user.namespace)
+    _, batch_api = get_k8s_api()
+    result = batch_api.list_namespaced_job(user.namespace)
     return result.to_dict()
 
 

@@ -172,7 +172,7 @@ def make_configmap(code: Union[str, pathlib.Path], generate_name) -> V1ConfigMap
         zp = p.with_suffix(".zip")
 
         if code.is_dir():
-            shutil.make_archive(p, "zip", str(code))
+            shutil.make_archive(str(p), "zip", str(code))
         else:
             with zipfile.ZipFile(zp, mode="w") as zf:
                 zf.write(str(code))
