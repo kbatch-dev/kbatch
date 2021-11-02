@@ -64,12 +64,11 @@ def list(kbatch_url, token):
 def submit(file, code, name, description, image, command, args, kbatch_url, token, env):
     if command:
         command = json.loads(command)
-    if env:
-        env = json.loads(env)
     if args:
         args = json.loads(args)
 
     data = {}
+
     if file:
         data = yaml.safe_load(Path(file).read_text())
     if name is not None:
@@ -82,6 +81,9 @@ def submit(file, code, name, description, image, command, args, kbatch_url, toke
         data["args"] = args
     if command is not None:
         data["command"] = command
+    if env:
+        env = json.loads(env)
+        data["env"] = env
 
     code = code or data.pop("code", None)
 
