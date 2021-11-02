@@ -151,7 +151,7 @@ def patch_configmap_owner(job: V1Job, config_map: V1ConfigMap):
 
     config_map.metadata.owner_references = [
         V1OwnerReference(
-            api_version="api/v1",
+            api_version="batch/v1",
             kind="Job",
             name=job.metadata.name,
             uid=job.metadata.uid,
