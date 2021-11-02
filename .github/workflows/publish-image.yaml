@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}-server
+  IMAGE_NAME: ${{ github.repository }}-proxy
   HELM_NAME: ${{ github.repository_owner }}/charts/${{ github.event.repository.name }}
   HELM_EXPERIMENTAL_OCI: 1  # enables publishing Helm images to GHCR
 
@@ -58,8 +58,8 @@ jobs:
       #     echo ${{ secrets.GITHUB_TOKEN }} | helm registry login ${{ env.REGISTRY }}/${{ env.HELM_NAME }} -u ${{ github.repository_owner }} --password-stdin
       # - name: Save chart locally
       #   run: |
-      #     helm package ./kbatch-server/helm/kbatch-server
+      #     helm package ./kbatch-proxy/helm/kbatch-proxy
       # - name: Publish chart
       #   run: |
       #     # TODO: figure out versioning
-      #     helm push kbatch-server-0.1.0.tgz oci://${{ env.REGISTRY }}/{{ env.HELM_NAME }}
+      #     helm push kbatch-proxy-0.1.0.tgz oci://${{ env.REGISTRY }}/{{ env.HELM_NAME }}
