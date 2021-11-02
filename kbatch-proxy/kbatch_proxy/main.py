@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple
 
 from pydantic import BaseModel, BaseSettings
 import jupyterhub.services.auth
-from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status, APIRouter
 import kubernetes.client
 import kubernetes.config
 import kubernetes.client.models
@@ -29,6 +29,8 @@ class Settings(BaseSettings):
 
     jupyterhub_api_token: str = "super-secret"
     jupyterhub_service_prefix: str = "/"
+    # lazy prefix handling. Will want to put nginx in front of this.
+    kbatch_prefix: str = ""
 
     class Config:
         env_file = os.environ.get("KBATCH_SETTINGS_PATH", ".env")
@@ -38,6 +40,7 @@ class Settings(BaseSettings):
 settings = Settings()
 
 app = FastAPI()
+router = APIRouter(prefix=settings.kbatch_prefix)
 
 
 class User(BaseModel):
@@ -96,21 +99,21 @@ def get_k8s_api() -> Tuple[kubernetes.client.CoreV1Api, kubernetes.client.BatchV
 # app
 
 
-@app.get("/jobs/{job_name}")
+@router.get("/jobs/{job_name}")
 async def read_job(job_name: str, user: User = Depends(get_current_user)):
     _, batch_api = get_k8s_api()
     result = batch_api.read_namespaced_job(job_name, user.namespace)
     return result.to_dict()
 
 
-@app.get("/jobs/")
+@router.get("/jobs/")
 async def read_jobs(user: User = Depends(get_current_user)):
     _, batch_api = get_k8s_api()
     result = batch_api.list_namespaced_job(user.namespace)
     return result.to_dict()
 
 
-@app.post("/jobs/")
+@router.post("/jobs/")
 async def create_job(request: Request, user: User = Depends(get_current_user)):
     api, batch_api = get_k8s_api()
 
@@ -158,6 +161,14 @@ async def create_job(request: Request, user: User = Depends(get_current_user)):
 
     # TODO: set Job as the owner of the code.
     return resp.to_dict()
+
+
+@router.get("/")
+def get_root():
+    return {"message": "kbatch"}
+
+
+app.include_router(router)
 
 
 @app.get("/")
