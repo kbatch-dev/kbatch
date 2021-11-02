@@ -113,24 +113,6 @@ def make_job(
     # else:
     #     tolerations = None
 
-    # init_containers = None
-    # if job.upload:
-    #     init_containers = [
-    #         V1Container(
-    #             args=[
-    #                 "-c",
-    #                 (
-    #                     f'wget "{job.upload.file.url}" -O /{job.upload.file.name}; '
-    #                     f"unzip -d /code/ /{job.upload.file.name}"
-    #                 ),
-    #             ],
-    #             command=["/bin/sh"],
-    #             image="inutano/wget:1.20.3-r1",
-    #             name=f"{name}-init",
-    #             volume_mounts=[file_volume_mount],
-    #         )
-    #     ]
-
     # TODO: verify restart policy
     template = V1PodTemplateSpec(
         spec=V1PodSpec(
