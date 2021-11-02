@@ -7,7 +7,7 @@ app:
   extra_env: {}
 
 image:
-  repository: ghcr.io/kbatch-dev/kbatch-server
+  repository: ghcr.io/kbatch-dev/kbatch-proxy
   pullPolicy: IfNotPresent
   tag: ""
 

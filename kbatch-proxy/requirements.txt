@@ -4,3 +4,4 @@ kubernetes
 uvicorn[standard]
 jupyterhub
 escapism
+rich
