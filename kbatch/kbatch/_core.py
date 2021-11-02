@@ -1,12 +1,14 @@
+import base64
 import os
 import json
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Optional, Dict, Union
 
 import httpx
 import urllib.parse
 
 from ._types import Job
+from ._backend import make_configmap
 
 
 def config_path() -> Path:
@@ -119,6 +121,7 @@ def list_jobs(kbatch_url, token):
 def submit_job(
     job: Job,
     *,
+    code: Optional[Union[str, Path]] = None,
     kbatch_url: Optional[str] = None,
     token: Optional[str] = None,
 ):
@@ -138,30 +141,13 @@ def submit_job(
         "Authorization": f"token {token}",
     }
     data = job.to_kubernetes().to_dict()
-    data = {"job": data}  # TODO: figure out if we should nest this or not. I think not.
-
-    # data = dataclasses.asdict(spec)
-    # code = data.pop("code")
-
-    # if code:
-    #     with tempfile.TemporaryDirectory() as d:
-    #         p = Path(d) / "code"
-    #         if Path(code).is_dir():
-    #             archive = shutil.make_archive(p, "zip", code)
-    #         else:
-    #             archive = str(p.with_suffix(".zip"))
-    #             with zipfile.ZipFile(archive, mode="w") as zf:
-    #                 zf.write(code)
-
-    #         r = client.post(
-    #             urllib.parse.urljoin(kbatch_url, "uploads/"),
-    #             files={"file": open(archive, "rb")},
-    #             headers=headers,
-    #         )
-    #         if r.status_code > 201:
-    #             raise ValueError(r.json())
-
-    #     data["upload"] = r.json()["url"]
+    data = {"job": data}
+    if code:
+        cm = make_configmap(code, generate_name=job.name).to_dict()
+        cm["binary_data"]["code"] = base64.b64encode(cm["binary_data"]["code"]).decode(
+            "ascii"
+        )
+        data["code"] = cm
 
     r = client.post(
         urllib.parse.urljoin(kbatch_url, "jobs/"),

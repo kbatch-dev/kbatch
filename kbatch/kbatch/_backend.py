@@ -3,8 +3,12 @@ Build and submit Jobs to Kubernetes.
 
 This is used only by the kbatch backend. kbatch users do not have access to the Kubernetes API.
 """
+import pathlib
 import string
-from typing import Optional, List, Dict
+import shutil
+import tempfile
+import zipfile
+from typing import Optional, List, Dict, Union
 
 from kubernetes.client.models import (
     V1Job,
@@ -12,34 +16,27 @@ from kubernetes.client.models import (
     V1PodSpec,
     V1PodTemplateSpec,
     V1ObjectMeta,
-    # V1Volume,
-    # V1VolumeMount,
-    V1Toleration,
+    # V1Toleration,
     V1ResourceRequirements,
     V1EnvVar,
     V1Container,
+    V1ConfigMap,
 )
 
 from ._types import Job
 
-# TODO: figure out how to associate with a user. Attach it as a label  or annotation probably.
-# TODO: figure out how to "upload" files.
-# TODO: get job logs, cache to storage, delete pods
-# TODO: clean up jobs
-# TODO: Insert env vars for Dask Gateawy (JUPYTERHUB_API_TOKEN, auth, image, proxy, etc.)
-
 SAFE_CHARS = set(string.ascii_lowercase + string.digits)
 
 
-def parse_toleration(t: str) -> V1Toleration:
-    if t.count("=") == 1 and t.count(":") == 1:
-        key, rest = t.split("=", 1)
-        value, effect = rest.split(":", 1)
-        return V1Toleration(key=key, value=value, effect=effect)
-    else:
-        raise ValueError(
-            f"Invalid toleration {t}. Should be of the form <key>=<value>:<effect>"
-        )
+# def parse_toleration(t: str) -> V1Toleration:
+#     if t.count("=") == 1 and t.count(":") == 1:
+#         key, rest = t.split("=", 1)
+#         value, effect = rest.split(":", 1)
+#         return V1Toleration(key=key, value=value, effect=effect)
+#     else:
+#         raise ValueError(
+#             f"Invalid toleration {t}. Should be of the form <key>=<value>:<effect>"
+#         )
 
 
 def make_job(
@@ -80,7 +77,8 @@ def make_job(
         env=env_vars,
         # volume_mounts=[file_volume_mount],
         resources=V1ResourceRequirements(),
-        # working_dir="/code",
+        # TODO: this is important. validate it!
+        working_dir="/code",
     )
 
     container.resources.requests = {}
@@ -164,3 +162,28 @@ def make_job(
         ),
     )
     return job
+
+
+def make_configmap(code: Union[str, pathlib.Path], generate_name) -> V1ConfigMap:
+    code = pathlib.Path(code)
+
+    with tempfile.TemporaryDirectory() as d:
+        p = pathlib.Path(d) / "code"
+        zp = p.with_suffix(".zip")
+
+        if code.is_dir():
+            shutil.make_archive(str(p), "zip", str(code))
+        else:
+            with zipfile.ZipFile(zp, mode="w") as zf:
+                zf.write(str(code))
+
+        data = zp.read_bytes()
+
+    metadata = V1ObjectMeta(generate_name=generate_name)
+    cm = V1ConfigMap(
+        api_version="v1",
+        binary_data={"code": data},
+        kind="ConfigMap",
+        metadata=metadata,
+    )
+    return cm
