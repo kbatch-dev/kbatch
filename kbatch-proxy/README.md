@@ -25,3 +25,51 @@ Users will make requests to `kbatch-proxy`. Upon request we will
 ## Security model
 
 This remains to be proven effective, but the hope is to let users do whatever they want in their own namespace and nothing outside of their namespace.
+
+## Container images
+
+We provide container images at <https://github.com/kbatch-dev/kbatch/pkgs/container/kbatch-proxy>.
+
+```
+$ docker pull ghcr.io/kbatch-dev/kbatch-proxy:latest
+```
+
+## Deployment
+
+`kbatch-proxy` is most easily deployed as a JupyterHub service using Helm. A few values need to be configured:
+
+```yaml
+# file: config.yaml
+app:
+  jupyterhub_api_token: "<jupyterhub-api-token>"
+  jupyterhub_api_url: "https://<jupyterhub-url>/hub/api/"
+  extra_env:
+    KBATCH_PREFIX: "/services/kbatch"
+
+# image:
+#   tag: "0.1.4"  # you likely want to pin the latest here.
+```
+
+Note: we don't currently publish a helm chart, so you have to `git clone` the kbatch repository.
+
+From the `kbatch/kbatch-proxy` directory, use helm to install the chart
+
+```
+$ helm upgrade --install kbatch-proxy ../helm/kbatch-proxy/ \
+    -n "<namepsace> \
+    -f config.yaml
+```
+
+You'll need to configure kbatch as a JupyterHub service. This example makes it available at `/services/kbatch` (this should match `KBATCH_PREFIX` above):
+
+```yaml
+jupyterhub:
+  hub:
+    services:
+      kbatch:
+        admin: true
+        api_token: "<jupyterhub-api-token>"  # match the api token above
+        url: "http://kbatch-proxy.<kbatch-namespace>.svc.cluster.local"
+```
+
+That example relies on kbatch being deployed to the same Kubernetes cluster as JupyterHub, so JupyterHub can proxy requests to `kbatch-proxy` using Kubernetes' internal DNS. The namespace in that URL should match the namespace where `kbatch` was deployed.
