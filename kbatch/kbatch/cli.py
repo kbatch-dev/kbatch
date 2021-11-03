@@ -70,6 +70,7 @@ def submit(file, code, name, description, image, command, args, kbatch_url, toke
 
     if file:
         data = yaml.safe_load(Path(file).read_text())
+
     if name is not None:
         data["name"] = name
     if description is not None:
@@ -95,3 +96,18 @@ def submit(file, code, name, description, image, command, args, kbatch_url, toke
         token=token,
     )
     rich.print_json(data=result)
+
+
+@job.command()
+@click.argument("job_name")
+@click.option("--kbatch-url", help="URL to the kbatch server.")
+@click.option("--token", help="File to execute.")
+@click.option("--pretty/--no-pretty", default=True)
+def logs(job_name, kbatch_url, token, pretty):
+    result = _core.logs(job_name, kbatch_url, token)
+    if pretty:
+        import rich
+
+        rich.print(result)
+    else:
+        print(result)

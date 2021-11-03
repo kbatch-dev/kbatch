@@ -145,3 +145,26 @@ def submit_job(
         raise ValueError(r.json())
 
     return r.json()
+
+
+def logs(job_name, kbatch_url, token):
+    config = load_config()
+
+    client = httpx.Client(follow_redirects=True)
+    token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
+    kbatch_url = kbatch_url or os.environ.get("KBATCH_URL") or config["kbatch_url"]
+
+    if kbatch_url is None:
+        raise ValueError(...)
+
+    if not kbatch_url.endswith("/"):
+        kbatch_url += "/"
+
+    headers = {
+        "Authorization": f"token {token}",
+    }
+
+    r = client.get(
+        urllib.parse.urljoin(kbatch_url, f"jobs/logs/{job_name}/"), headers=headers
+    )
+    return r.text

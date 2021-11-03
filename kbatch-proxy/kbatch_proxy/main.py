@@ -7,9 +7,11 @@ from pydantic import BaseModel, BaseSettings
 import jupyterhub.services.auth
 from fastapi import Depends, FastAPI, HTTPException, Request, status, APIRouter
 import kubernetes.client
-import kubernetes.config
 import kubernetes.client.models
+import kubernetes.config
+import kubernetes.watch
 import rich.traceback
+from fastapi.responses import PlainTextResponse
 
 from . import patch
 from . import utils
@@ -172,6 +174,20 @@ async def create_job(request: Request, user: User = Depends(get_current_user)):
 
     # TODO: set Job as the owner of the code.
     return resp.to_dict()
+
+
+@router.get("/jobs/logs/{job_name}/", response_class=PlainTextResponse)
+async def logs(job_name: str, user: User = Depends(get_current_user)):
+    api, _ = get_k8s_api()
+    logs = api.read_namespaced_pod_log(name=job_name, namespace=user.namespace)
+
+    return logs
+
+    # watch = kubernetes.watch.Watch()
+    # for event in watch.stream(api.read_namespaced_pod_log, name=job_name,
+    #                           namespace=user.namespace):
+    #     # TODO: SSE
+    #     print(event)
 
 
 @router.get("/")
