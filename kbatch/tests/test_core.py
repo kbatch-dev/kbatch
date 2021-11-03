@@ -1,12 +1,18 @@
+import json
 import contextlib
 import io
 import os
 import pathlib
 import zipfile
+
+import httpx
+import respx
 import pytest
 import kubernetes
 
 import kbatch
+
+HERE = pathlib.Path(__file__).parent
 
 
 @pytest.fixture
@@ -21,7 +27,6 @@ def model_job():
     ],
 )
 def test_env(env):
-    # k8s_config = types_.KubernetesConfig()
     jobin = kbatch.Job(name="name", command=["ls -lh"], image="alpine", env=env)
 
     job = kbatch.make_job(jobin)
@@ -30,27 +35,6 @@ def test_env(env):
         kubernetes.client.V1EnvVar(name="KEY1", value="VALUE1"),
         kubernetes.client.V1EnvVar(name="KEY2", value="VALUE2"),
     ]
-
-
-# @pytest.mark.parametrize(
-#     "toleration",
-#     [
-#         kubernetes.client.V1Toleration(
-#             key="hub.jupyter.org/dedicated", value="user", effect="NoSchedule"
-#         ),
-#         "hub.jupyter.org/dedicated=user:NoSchedule",
-#     ],
-# )
-# def test_node_tolerations(model_job, toleration):
-#     # k8s_config = types_.KubernetesConfig(tolerations=[toleration])
-#     job = kbatch.make_job(model_job, k8s_config)
-#     pod = job.spec.template.spec
-
-#     assert pod.tolerations == [
-#         kubernetes.client.V1Toleration(
-#             key="hub.jupyter.org/dedicated", value="user", effect="NoSchedule"
-#         )
-#     ]
 
 
 def test_command_args():
@@ -119,3 +103,84 @@ def test_handle_url():
 
     result = kbatch._core._handle_url(None, config)
     assert result == "http://kbatch-config.com/"
+
+    with pytest.raises(ValueError, match="Must specify"):
+        kbatch._core._handle_url(None, config={"kbatch_url": None})
+
+
+# These tests mock out the server component. They aren't really testing much.
+
+
+def test_configure(respx_mock: respx.MockRouter, tmp_path: pathlib.Path):
+    respx_mock.get("http://kbatch.com/authorized").mock(
+        return_value=httpx.Response(200)
+    )
+
+    expected = tmp_path / "kbatch/config.json"
+    with tmp_env("XDG_CONFIG_HOME", str(tmp_path)):
+        result = kbatch._core.config_path()
+        assert result == expected
+
+        result = kbatch._core.configure(kbatch_url="http://kbatch.com", token="abc")
+        assert result == expected
+
+    config = json.loads(expected.read_text())
+    assert config == {"token": "abc", "kbatch_url": "http://kbatch.com/"}
+
+
+def test_show_job(respx_mock: respx.MockRouter):
+    data = json.loads(HERE.joinpath("data", "show_job.json").read_text())
+    respx_mock.get("http://kbatch.com/jobs/myjob").mock(
+        return_value=httpx.Response(200, json=data)
+    )
+
+    result = kbatch.show_job("myjob", "http://kbatch.com/", token="abc")
+    assert result == data
+
+
+def test_list_jobs(respx_mock: respx.MockRouter):
+    data = json.loads(HERE.joinpath("data", "list_jobs.json").read_text())
+    respx_mock.get("http://kbatch.com/jobs/").mock(
+        return_value=httpx.Response(200, json=data)
+    )
+
+    result = kbatch.list_jobs("http://kbatch.com/", token="abc")
+    assert result == data
+
+
+def test_logs(respx_mock: respx.MockRouter):
+    data = HERE.joinpath("data", "list_jobs.json").read_text()
+    respx_mock.get("http://kbatch.com/jobs/logs/mypod/").mock(
+        return_value=httpx.Response(200, text=data)
+    )
+
+    result = kbatch.logs("mypod", "http://kbatch.com/", token="abc")
+    assert result == data
+
+
+def test_submit_job(respx_mock: respx.MockRouter):
+    respx_mock.post("http://kbatch.com/jobs/").mock(
+        return_value=httpx.Response(200, json={"mock": "response"})
+    )
+
+    job = kbatch.Job(
+        name="name",
+        command=["/bin/sh"],
+        args=["-c", "python"],
+        image="alpine",
+    )
+
+    result = kbatch.submit_job(job, kbatch_url="http://kbatch.com/", token="abc")
+    assert result
+
+    job = kbatch.Job(
+        name="name",
+        command=["/bin/sh"],
+        args=["-c", "python"],
+        image="alpine",
+    )
+
+    result = kbatch.submit_job(
+        job, code=__file__, kbatch_url="http://kbatch.com/", token="abc"
+    )
+    assert result

@@ -1,0 +1,22 @@
++ python -m pip install rich
+Collecting rich
+  Downloading rich-10.12.0-py3-none-any.whl (212 kB)
+Collecting pygments<3.0.0,>=2.6.0
+  Downloading Pygments-2.10.0-py3-none-any.whl (1.0 MB)
+Collecting colorama<0.5.0,>=0.4.0
+  Downloading colorama-0.4.4-py2.py3-none-any.whl (16 kB)
+Collecting commonmark<0.10.0,>=0.9.0
+  Downloading commonmark-0.9.1-py2.py3-none-any.whl (51 kB)
+Installing collected packages: pygments, commonmark, colorama, rich
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+Successfully installed colorama-0.4.4 commonmark-0.9.1 pygments-2.10.0 rich-10.12.0
+WARNING: You are using pip version 21.2.4; however, version 21.3.1 is available.
+You should consider upgrading via the '/usr/local/bin/python -m pip install --upgrade pip' command.
++ python -m rich.live
+[13:49:50] You can make the terminal shorter and taller to see the   live.py:353
+           live table hideText may be printed while the progress                
+           bars are rendering.                                                  
+[13:49:52] ╭───────────────────────────────────────────────────────╮ live.py:353
+           │ In fact, any renderable will work                     │            
+           ╰───────────────────────────────────────────────────────╯            
+[13:49:53] Such as tables...                                         live.py:353

@@ -4,12 +4,10 @@ Submit batch jobs to Kubernetes. Complements JupyterHub's support for interactiv
 
 ## Usage
 
-All `kbatch` commands involve talking to 
-
-Authenticate with the server
+`kbatch` is typically uses JupyterHub for authentication.
 
 ```
-$ kbatch login https://url-to-kbatch-server
+$ kbatch configure --kbatch-url=https://url-to-kbatch-server --token=<JUPYTERHUB_TOKEN>
 ```
 
 This will create configuration file that specifies the default URL and credentials to use for all `kbatch` operations.
@@ -37,14 +35,14 @@ $ kbatch job submit --name=test \
 List jobs
 
 ```
-$ kbatch jobs list
+$ kbatch job list
 ...
 ```
 
 Show the detail on a given job
 
 ```
-$ kbatch jobs show --job-id=...
+$ kbatch job show --job-id=...
 ```
 
 ## Local file handling

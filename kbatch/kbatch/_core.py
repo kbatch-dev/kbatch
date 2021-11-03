@@ -60,7 +60,7 @@ def configure(kbatch_url=None, token=None) -> Path:
 
     url = urllib.parse.urljoin(kbatch_url, "authorized")
     r = client.get(url, headers=headers)
-    assert r.status_code == 200
+    r.raise_for_status()
 
     config = {"kbatch_url": kbatch_url, "token": token}
     configpath = config_path()
@@ -84,8 +84,7 @@ def show_job(job_name, kbatch_url, token):
     r = client.get(
         urllib.parse.urljoin(kbatch_url, f"jobs/{job_name}"), headers=headers
     )
-    if r.status_code >= 399:
-        raise ValueError(r.json())
+    r.raise_for_status()
 
     return r.json()
 
@@ -102,10 +101,28 @@ def list_jobs(kbatch_url, token):
     }
 
     r = client.get(urllib.parse.urljoin(kbatch_url, "jobs/"), headers=headers)
-    if r.status_code >= 201:
-        raise ValueError(r.json())
+    r.raise_for_status()
 
     return r.json()
+
+
+def logs(job_name, kbatch_url, token):
+    config = load_config()
+
+    client = httpx.Client(follow_redirects=True)
+    token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
+    kbatch_url = _handle_url(kbatch_url, config)
+
+    headers = {
+        "Authorization": f"token {token}",
+    }
+
+    r = client.get(
+        urllib.parse.urljoin(kbatch_url, f"jobs/logs/{job_name}/"), headers=headers
+    )
+    r.raise_for_status()
+
+    return r.text
 
 
 def submit_job(
@@ -138,24 +155,6 @@ def submit_job(
         json=data,
         headers=headers,
     )
-    if r.status_code >= 400:
-        raise ValueError(r.json())
+    r.raise_for_status()
 
     return r.json()
-
-
-def logs(job_name, kbatch_url, token):
-    config = load_config()
-
-    client = httpx.Client(follow_redirects=True)
-    token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
-    kbatch_url = _handle_url(kbatch_url, config)
-
-    headers = {
-        "Authorization": f"token {token}",
-    }
-
-    r = client.get(
-        urllib.parse.urljoin(kbatch_url, f"jobs/logs/{job_name}/"), headers=headers
-    )
-    return r.text
