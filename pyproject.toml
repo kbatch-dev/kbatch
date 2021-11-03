@@ -23,6 +23,7 @@ module = [
     "kubernetes",
     "kubernetes.config",
     "kubernetes.client",
+    "kubernetes.watch",
     "kubernetes.client.models",
 ]
 ignore_missing_imports = true
