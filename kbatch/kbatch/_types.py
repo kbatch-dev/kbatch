@@ -12,7 +12,7 @@ class User:
 class Job:
     name: str
     image: str
-    command: Optional[List[str]]
+    command: Optional[List[str]] = None
     args: Optional[List[str]] = None
     upload: Optional[str] = None
     description: Optional[str] = None

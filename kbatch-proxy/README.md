@@ -73,3 +73,21 @@ jupyterhub:
 ```
 
 That example relies on kbatch being deployed to the same Kubernetes cluster as JupyterHub, so JupyterHub can proxy requests to `kbatch-proxy` using Kubernetes' internal DNS. The namespace in that URL should match the namespace where `kbatch` was deployed.
+
+## Dask Gateway Integration
+
+If your JupyterHub is deployed with Dask Gateway, you might want to set a few additional environment variables in the job
+so that they behave similarly to the singleuser notebook pod.
+
+```yaml
+app:
+  extra_env:
+    KBATCH_JOB_EXTRA_ENV: |
+      {
+        "DASK_GATEWAY__AUTH__TYPE": "jupyterhub",
+        "DASK_GATEWAY__CLUSTER__OPTIONS__IMAGE": "{JUPYTER_IMAGE_SPEC}",
+        "DASK_GATEWAY__ADDRESS":  "https://<JUPYTERHUB_URL>/services/dask-gateway",
+        "DASK_GATEWAY__PROXY_ADDRESS": "gateway://<DASK_GATEWAY_ADDRESS>:80"
+      }
+
+```
