@@ -4,3 +4,4 @@ command:
   - sh
   - script.sh
 image: "mcr.microsoft.com/planetary-computer/python:latest"
+code: "script.sh"
