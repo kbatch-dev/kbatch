@@ -1,7 +1,7 @@
 import os
 import functools
 import logging
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict
 
 from pydantic import BaseModel, BaseSettings
 import jupyterhub.services.auth
@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     jupyterhub_service_prefix: str = "/"
     # lazy prefix handling. Will want to put nginx in front of this.
     kbatch_prefix: str = ""
+
+    # Additional environment variables to set in the job environment
+    kbatch_job_extra_env: Dict[str, str] = None
 
     class Config:
         env_file = os.environ.get("KBATCH_SETTINGS_PATH", ".env")
@@ -137,7 +140,14 @@ async def create_job(request: Request, user: User = Depends(get_current_user)):
     else:
         config_map = None
 
-    patch.patch(job, config_map, annotations={}, labels={}, username=user.name)
+    patch.patch(
+        job,
+        config_map,
+        annotations={},
+        labels={},
+        username=user.name,
+        extra_env=settings.kbatch_job_extra_env,
+    )
 
     # What needs to happen when? We have a few requirements
     # 1. The code ConfigMap must exist before adding it as a volume (we need a name,

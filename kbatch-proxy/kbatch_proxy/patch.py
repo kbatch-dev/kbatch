@@ -3,7 +3,7 @@ Patch a V1Job.
 """
 import re
 import string
-from typing import Optional
+from typing import Dict, Optional
 
 import escapism
 from kubernetes.client.models import (
@@ -15,6 +15,7 @@ from kubernetes.client.models import (
     V1ConfigMapVolumeSource,
     V1KeyToPath,
     V1OwnerReference,
+    V1EnvVar,
 )
 
 
@@ -108,6 +109,16 @@ def add_unzip_init_container(job: V1Job) -> None:
         job.spec.template.spec.containers[0].volume_mounts.append(code_dst_volume_mount)
 
 
+def add_extra_env(job: V1Job, extra_env: Dict[str, str]) -> None:
+    container = job.spec.template.spec.containers[0]
+    env_vars = [V1EnvVar(name=name, value=value) for name, value in extra_env.items()]
+
+    if container.env is None:
+        container.env = env_vars
+    else:
+        container.env.extend(env_vars)
+
+
 def namespace_for_username(username: str) -> str:
     """
     Get the Kubernetes namespace for a JupyterHub user.
@@ -120,7 +131,13 @@ def namespace_for_username(username: str) -> str:
 
 
 def patch(
-    job: V1Job, config_map: Optional[V1ConfigMap], *, annotations, labels, username: str
+    job: V1Job,
+    config_map: Optional[V1ConfigMap],
+    *,
+    annotations,
+    labels,
+    username: str,
+    extra_env: Optional[Dict[str, str]] = None,
 ) -> None:
     """
     Updates the Job inplace with the following modifications:
@@ -130,9 +147,12 @@ def patch(
     * Sets the namespace of the job (and all containers) and ConfigMap to `namespacee`
     * Adds the ConfigMap as a volume for the Job's container
     """
+    extra_env = extra_env or {}
+
     add_annotations(job, annotations, username)
     add_labels(job, labels, username)
     add_namespace(job, namespace_for_username(username))
+    add_extra_env(job, extra_env)
     if config_map:
         add_namespace_configmap(config_map, namespace_for_username(username))
         add_unzip_init_container(job)

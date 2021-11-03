@@ -134,3 +134,24 @@ def test_add_unzip_init_container(
     )
     kbatch_proxy.patch.add_submitted_configmap_name(k8s_job, config_map)
     assert k8s_job.spec.template.spec.volumes[-2].config_map.name == "actual-name"
+
+
+@pytest.mark.parametrize(
+    "job_env", [None, [], [kubernetes.client.V1EnvVar(name="SAS_TOKEN", value="TOKEN")]]
+)
+def test_extra_env(job_env, k8s_job: kubernetes.client.V1Job):
+    has_env = bool(job_env)
+    k8s_job.spec.template.spec.containers[0].env = job_env
+
+    extra_env = {"MY_ENV": "VALUE"}
+    kbatch_proxy.patch.add_extra_env(k8s_job, extra_env)
+
+    if has_env:
+        expected = [
+            kubernetes.client.V1EnvVar(name="SAS_TOKEN", value="TOKEN"),
+            kubernetes.client.V1EnvVar(name="MY_ENV", value="VALUE"),
+        ]
+    else:
+        expected = [kubernetes.client.V1EnvVar(name="MY_ENV", value="VALUE")]
+
+    assert k8s_job.spec.template.spec.containers[0].env == expected
