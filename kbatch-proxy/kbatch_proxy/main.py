@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     kbatch_prefix: str = ""
 
     # Additional environment variables to set in the job environment
-    kbatch_job_extra_env: Dict[str, str] = None
+    kbatch_job_extra_env: Optional[Dict[str, str]] = None
 
     class Config:
         env_file = os.environ.get("KBATCH_SETTINGS_PATH", ".env")
@@ -51,11 +51,17 @@ router = APIRouter(prefix=settings.kbatch_prefix)
 class User(BaseModel):
     name: str
     groups: List[str]
+    api_token: Optional[str]
 
     @property
     def namespace(self) -> str:
         """The Kubernetes namespace for a user."""
         return patch.namespace_for_username(self.name)
+
+
+class UserOut(BaseModel):
+    name: str
+    groups: List[str]
 
 
 # ----------------------------------------------------------------------------
@@ -81,7 +87,7 @@ async def get_current_user(request: Request) -> User:
         user = None
 
     if user:
-        return User(**user, authenticated=True)
+        return User(**user, api_token=token, authenticated=True)
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -147,6 +153,7 @@ async def create_job(request: Request, user: User = Depends(get_current_user)):
         labels={},
         username=user.name,
         extra_env=settings.kbatch_job_extra_env,
+        api_token=user.api_token,
     )
 
     # What needs to happen when? We have a few requirements
@@ -206,8 +213,8 @@ def get_root():
 
 
 @router.get("/authorized")
-def authorized(user: User = Depends(get_current_user)) -> User:
-    return user
+def authorized(user: User = Depends(get_current_user)) -> UserOut:
+    return UserOut(**user.dict())
 
 
 app.include_router(router)

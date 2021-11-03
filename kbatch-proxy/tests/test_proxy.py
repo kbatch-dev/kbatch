@@ -144,14 +144,26 @@ def test_extra_env(job_env, k8s_job: kubernetes.client.V1Job):
     k8s_job.spec.template.spec.containers[0].env = job_env
 
     extra_env = {"MY_ENV": "VALUE"}
-    kbatch_proxy.patch.add_extra_env(k8s_job, extra_env)
+    kbatch_proxy.patch.add_extra_env(k8s_job, extra_env, api_token="super-secret")
 
     if has_env:
         expected = [
             kubernetes.client.V1EnvVar(name="SAS_TOKEN", value="TOKEN"),
             kubernetes.client.V1EnvVar(name="MY_ENV", value="VALUE"),
+            kubernetes.client.V1EnvVar(name="JUPYTER_IMAGE", value="alpine"),
+            kubernetes.client.V1EnvVar(name="JUPYTER_IMAGE_SPEC", value="alpine"),
+            kubernetes.client.V1EnvVar(
+                name="JUPYTERHUB_API_TOKEN", value="super-secret"
+            ),
         ]
     else:
-        expected = [kubernetes.client.V1EnvVar(name="MY_ENV", value="VALUE")]
+        expected = [
+            kubernetes.client.V1EnvVar(name="MY_ENV", value="VALUE"),
+            kubernetes.client.V1EnvVar(name="JUPYTER_IMAGE", value="alpine"),
+            kubernetes.client.V1EnvVar(name="JUPYTER_IMAGE_SPEC", value="alpine"),
+            kubernetes.client.V1EnvVar(
+                name="JUPYTERHUB_API_TOKEN", value="super-secret"
+            ),
+        ]
 
     assert k8s_job.spec.template.spec.containers[0].env == expected

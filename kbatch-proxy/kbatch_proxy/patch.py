@@ -109,9 +109,24 @@ def add_unzip_init_container(job: V1Job) -> None:
         job.spec.template.spec.containers[0].volume_mounts.append(code_dst_volume_mount)
 
 
-def add_extra_env(job: V1Job, extra_env: Dict[str, str]) -> None:
+def add_extra_env(
+    job: V1Job, extra_env: Dict[str, str], api_token: Optional[str] = None
+) -> None:
     container = job.spec.template.spec.containers[0]
     env_vars = [V1EnvVar(name=name, value=value) for name, value in extra_env.items()]
+
+    image = job.spec.template.spec.containers[0].image
+
+    env_vars.extend(
+        [
+            V1EnvVar(name="JUPYTER_IMAGE", value=image),
+            V1EnvVar(name="JUPYTER_IMAGE_SPEC", value=image),
+        ]
+    )
+
+    if api_token:
+        # TODO: use a k8s secret
+        env_vars.append(V1EnvVar(name="JUPYTERHUB_API_TOKEN", value=api_token))
 
     if container.env is None:
         container.env = env_vars
@@ -138,6 +153,7 @@ def patch(
     labels,
     username: str,
     extra_env: Optional[Dict[str, str]] = None,
+    api_token: Optional[str] = None,
 ) -> None:
     """
     Updates the Job inplace with the following modifications:
@@ -152,7 +168,7 @@ def patch(
     add_annotations(job, annotations, username)
     add_labels(job, labels, username)
     add_namespace(job, namespace_for_username(username))
-    add_extra_env(job, extra_env)
+    add_extra_env(job, extra_env, api_token)
     if config_map:
         add_namespace_configmap(config_map, namespace_for_username(username))
         add_unzip_init_container(job)

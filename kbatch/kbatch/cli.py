@@ -51,7 +51,7 @@ def list(kbatch_url, token):
 @click.option("--command", help="Command to execute.")
 @click.option("--args", help="Arguments to pass to the command.")
 @click.option("-e", "--env", help="JSON mapping of environment variables for the job.")
-@click.option("-d", "-description", help="A description of the job, optional.")
+@click.option("-d", "--description", help="A description of the job, optional.")
 @click.option(
     "-c",
     "--code",
