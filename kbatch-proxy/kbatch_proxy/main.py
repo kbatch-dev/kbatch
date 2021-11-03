@@ -179,6 +179,11 @@ def get_root():
     return {"message": "kbatch"}
 
 
+@router.get("/authorized")
+def authorized(user: User = Depends(get_current_user)) -> User:
+    return user
+
+
 app.include_router(router)
 
 

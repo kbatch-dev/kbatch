@@ -1,29 +1,10 @@
 # kbatch
 
-Submit batch jobs to JupyterHub.
+Submit batch jobs to Kubernetes. Complements JupyterHub's support for interactive computing on Kubernetes.
 
-*also*
+## Usage
 
-An asynchronous / batch complement to what JupyterHub already provides.
-
-## Desiderata
-
-- **Simplicity of implementation**: https://words.yuvi.in/post/kbatch/ by Yuvi Panda captures this well.
-- **Simplicity of use**: Ideally users don't need to adapt their script / notebook / unit of work to the job system.
-- **Integration with JupyterHub**: Runs as a JupyterHub services, uses JupyterHub for auth, etc.
-- **Runs on Kubernetes**: mainly for the simplicity of implementation, and also that's my primary use-case.
-
-Together, these rule some great tools like [Argo workflows](https://argoproj.github.io/workflows), [Ploomber](https://github.com/ploomber/ploomber), [Elyra](https://github.com/elyra-ai/elyra). So we write our own (hopefully simple) implementation.
-
-## Architecture
-
-We don't want to *directly* expose the Kubernetes API to the user. At the same time, we don't want a complicated deployment with its own state to maintain. We balance these competing interests by writing a *very* simple proxy that sits between the users and the Kubernetes API. This proxy is responsible for
-
-- Authenticating users (typically by checking the `Bearer` token with a call to the JupyterHub API)
-- Authorizing the command (essentially, making sure that the API call only touches objects in the user's namespace)
-- Submitting the call to the Kubernetes API, returning the results
-
-## Usage (hypothetical)
+All `kbatch` commands involve talking to 
 
 Authenticate with the server
 
@@ -81,3 +62,21 @@ When you job starts executing, its working directory is `/code`. So you can safe
 ## Development setup
 
 ...
+
+## Desiderata
+
+- **Simplicity of implementation**: https://words.yuvi.in/post/kbatch/ by Yuvi Panda captures this well.
+- **Simplicity of adoption**: Users don't need to adapt their script / notebook / unit of work to the job system.
+- **Integration with JupyterHub**: Runs as a JupyterHub services, uses JupyterHub for auth.
+- **Runs on Kubernetes**: mainly for the simplicity of implementation, and also that's my primary use-case.
+
+Together, these rule some great tools like [Argo workflows](https://argoproj.github.io/workflows), [Ploomber](https://github.com/ploomber/ploomber), [Elyra](https://github.com/elyra-ai/elyra). So we write our own (hopefully simple) implementation.
+
+## Architecture
+
+We don't want to *directly* expose the Kubernetes API to the user. At the same time, we don't want a complicated deployment with its own state to maintain. We balance these competing interests by writing a *very* simple proxy that sits between the users and the Kubernetes API. This proxy is responsible for
+
+- Authenticating users (typically by checking the `Bearer` token with a call to the JupyterHub API)
+- Authorizing the command (essentially, making sure that the API call only touches objects in the user's namespace)
+- Submitting the call to the Kubernetes API, returning the results
+

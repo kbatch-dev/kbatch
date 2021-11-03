@@ -29,41 +29,28 @@ def load_config() -> Dict[str, Optional[str]]:
     return config
 
 
-def configure(jupyterhub_url=None, kbatch_url=None, token=None) -> Path:
+def configure(kbatch_url=None, token=None) -> Path:
     token = token or os.environ.get("JUPYTERHUB_API_TOKEN")
-    jupyterhub_url = jupyterhub_url or os.environ.get("JUPYTERHUB_API_URL")
+    # Add an authorization endpoint to kbatch, have that
     kbatch_url = kbatch_url or os.environ.get("KBATCH_URL")
     # TODO: find the hub API url from a url..
-
-    if not jupyterhub_url:
-        raise ValueError(
-            "Must specify 'jupyterhub_url' or set the 'JUPYTERHUB_URL' environment variable."
-        )
 
     if not kbatch_url:
         raise ValueError(
             "Must specify 'kbatch_url' or set the 'KBATCH_URL' environment variable."
         )
 
-    if not jupyterhub_url.endswith("/"):
-        jupyterhub_url += "/"
-
     if not kbatch_url.endswith("/"):
         kbatch_url += "/"
 
-    client = httpx.Client()
+    client = httpx.Client(follow_redirects=True)
 
     headers = {"Authorization": f"token {token}"}
     # verify that things are OK
     # TODO: flexible URL
-    url = urllib.parse.urljoin(jupyterhub_url, f"authorizations/token/{token}")
-    r = client.get(
-        url,
-        headers=headers,
-    )
-    assert r.status_code == 200
 
-    r = client.get(kbatch_url, headers=headers)
+    url = urllib.parse.urljoin(kbatch_url, "authorized")
+    r = client.get(url, headers=headers)
     assert r.status_code == 200
 
     config = {"kbatch_url": kbatch_url, "token": token}
@@ -75,7 +62,7 @@ def configure(jupyterhub_url=None, kbatch_url=None, token=None) -> Path:
 
 
 def show_job(job_name, kbatch_url, token):
-    client = httpx.Client()
+    client = httpx.Client(follow_redirects=True)
     config = load_config()
 
     token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
@@ -98,7 +85,7 @@ def show_job(job_name, kbatch_url, token):
 
 
 def list_jobs(kbatch_url, token):
-    client = httpx.Client()
+    client = httpx.Client(follow_redirects=True)
     config = load_config()
 
     token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
@@ -127,7 +114,7 @@ def submit_job(
 ):
     config = load_config()
 
-    client = httpx.Client()
+    client = httpx.Client(follow_redirects=True)
     token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
     kbatch_url = kbatch_url or os.environ.get("KBATCH_URL") or config["kbatch_url"]
 

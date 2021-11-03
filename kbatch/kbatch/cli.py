@@ -16,11 +16,10 @@ def cli():
 
 
 @cli.command()
-@click.option("--jupyterhub-url")
 @click.option("--kbatch-url")
 @click.option("--token")
-def configure(jupyterhub_url, kbatch_url, token):
-    p = _core.configure(jupyterhub_url, kbatch_url, token)
+def configure(kbatch_url, token):
+    p = _core.configure(kbatch_url, token)
     rich.print(f"[green]Wrote config to[/green] [bold]{str(p)}[/bold]")
 
 
