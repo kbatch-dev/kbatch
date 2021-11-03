@@ -29,19 +29,28 @@ def load_config() -> Dict[str, Optional[str]]:
     return config
 
 
-def configure(kbatch_url=None, token=None) -> Path:
-    token = token or os.environ.get("JUPYTERHUB_API_TOKEN")
-    # Add an authorization endpoint to kbatch, have that
-    kbatch_url = kbatch_url or os.environ.get("KBATCH_URL")
-    # TODO: find the hub API url from a url..
+def _handle_url(kbatch_url: Optional[str], config: Dict[str, Optional[str]]) -> str:
+    """
+    Resolve the URL, with the following order:
 
+    1. The argument
+    2. The environment variable
+    3. The value from the config
+    """
+    kbatch_url = kbatch_url or os.environ.get("KBATCH_URL") or config["kbatch_url"]
     if not kbatch_url:
         raise ValueError(
             "Must specify 'kbatch_url' or set the 'KBATCH_URL' environment variable."
         )
-
     if not kbatch_url.endswith("/"):
         kbatch_url += "/"
+
+    return kbatch_url
+
+
+def configure(kbatch_url=None, token=None) -> Path:
+    token = token or os.environ.get("JUPYTERHUB_API_TOKEN")
+    kbatch_url = _handle_url(kbatch_url, config={"kbatch_url": None})
 
     client = httpx.Client(follow_redirects=True)
 
@@ -66,10 +75,7 @@ def show_job(job_name, kbatch_url, token):
     config = load_config()
 
     token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
-    kbatch_url = kbatch_url or os.environ.get("KBATCH_URL") or config["kbatch_url"]
-
-    if not kbatch_url.endswith("/"):
-        kbatch_url += "/"
+    kbatch_url = _handle_url(kbatch_url, config)
 
     headers = {
         "Authorization": f"token {token}",
@@ -89,10 +95,7 @@ def list_jobs(kbatch_url, token):
     config = load_config()
 
     token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
-    kbatch_url = kbatch_url or os.environ.get("KBATCH_URL") or config["kbatch_url"]
-
-    if not kbatch_url.endswith("/"):
-        kbatch_url += "/"
+    kbatch_url = _handle_url(kbatch_url, config)
 
     headers = {
         "Authorization": f"token {token}",
@@ -116,13 +119,7 @@ def submit_job(
 
     client = httpx.Client(follow_redirects=True)
     token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
-    kbatch_url = kbatch_url or os.environ.get("KBATCH_URL") or config["kbatch_url"]
-
-    if kbatch_url is None:
-        raise ValueError(...)
-
-    if not kbatch_url.endswith("/"):
-        kbatch_url += "/"
+    kbatch_url = _handle_url(kbatch_url, config)
 
     headers = {
         "Authorization": f"token {token}",
@@ -152,13 +149,7 @@ def logs(job_name, kbatch_url, token):
 
     client = httpx.Client(follow_redirects=True)
     token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
-    kbatch_url = kbatch_url or os.environ.get("KBATCH_URL") or config["kbatch_url"]
-
-    if kbatch_url is None:
-        raise ValueError(...)
-
-    if not kbatch_url.endswith("/"):
-        kbatch_url += "/"
+    kbatch_url = _handle_url(kbatch_url, config)
 
     headers = {
         "Authorization": f"token {token}",

@@ -1,4 +1,6 @@
+import contextlib
 import io
+import os
 import pathlib
 import zipfile
 import pytest
@@ -85,3 +87,35 @@ def test_make_configmap(tmp_path: pathlib.Path, as_dir: bool):
         assert b"file.txt" in result.binary_data["code"]
     else:
         assert b"ls" in result.binary_data["code"]
+
+
+@contextlib.contextmanager
+def tmp_env(key, value):
+    original = os.environ.get(key, None)
+    try:
+        os.environ[key] = value
+        yield
+    finally:
+        if original is None:
+            del os.environ[key]
+        else:
+            os.environ[key] = original
+
+
+def test_handle_url():
+    config = {"kbatch_url": "http://kbatch-config.com/"}
+    result = kbatch._core._handle_url("http://kbatch.com/", config)
+    assert result == "http://kbatch.com/"
+
+    result = kbatch._core._handle_url("http://kbatch.com", config)
+    assert result == "http://kbatch.com/"
+
+    with tmp_env("KBATCH_URL", "http://kbatch-env.com/"):
+        result = kbatch._core._handle_url(None, config)
+        assert result == "http://kbatch-env.com/"
+
+        result = kbatch._core._handle_url("http://kbatch.com/", config)
+        assert result == "http://kbatch.com/"
+
+    result = kbatch._core._handle_url(None, config)
+    assert result == "http://kbatch-config.com/"
