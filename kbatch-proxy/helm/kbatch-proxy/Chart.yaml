@@ -3,4 +3,4 @@ name: kbatch-proxy
 description: A Helm chart for kbatch-proxy
 type: application
 version: 0.1.0
-appVersion: "0.0.1"
+appVersion: "0.1.7"
