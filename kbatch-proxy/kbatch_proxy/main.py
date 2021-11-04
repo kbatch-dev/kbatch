@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     # Additional environment variables to set in the job environment
     kbatch_job_extra_env: Optional[Dict[str, str]] = None
 
+    # Whether to automatically create new namespaces for a users
+    kbatch_create_user_namepsace: bool = True
+
     class Config:
         env_file = os.environ.get("KBATCH_SETTINGS_PATH", ".env")
         env_file_encoding = "utf-8"
@@ -175,6 +178,12 @@ async def create_job(request: Request, user: User = Depends(get_current_user)):
         )
         patch.add_submitted_configmap_name(job, config_map)
 
+    if settings.kbatch_create_user_namepsace:
+        logger.info("Ensuring namespace %s", user.namespace)
+        created = ensure_namespace(api, user.namespace)
+        if created:
+            logger.info("Created namespace %s", user.namespace)
+
     logger.info("Submitting job")
     resp = batch_api.create_namespaced_job(namespace=user.namespace, body=job)
 
@@ -223,3 +232,31 @@ app.include_router(router)
 @app.get("/")
 async def app_root():
     return {"message": "kbatch"}
+
+
+# -------
+# utils
+
+
+def ensure_namespace(api: kubernetes.client.CoreV1Api, namespace: str):
+    """
+    Ensure that a Kubernetes namespace exists.
+
+    Parameters
+    ----------
+    api : kubernetes
+    """
+    try:
+        api.create_namespace(
+            body=kubernetes.client.V1Namespace(
+                metadata=kubernetes.client.V1ObjectMeta(name=namespace)
+            )
+        )
+    except kubernetes.client.ApiException as e:
+        if e.status == 409:
+            # already exists
+            return False
+        # otherwise re-raise
+        raise
+    else:
+        return True
