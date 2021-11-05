@@ -49,17 +49,3 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
-      # - name: Install helm
-      #   uses: Azure/setup-helm@v1
-
-      # - name: Login helm
-      #   run: |
-      #     echo ${{ secrets.GITHUB_TOKEN }} | helm registry login ${{ env.REGISTRY }}/${{ env.HELM_NAME }} -u ${{ github.repository_owner }} --password-stdin
-      # - name: Save chart locally
-      #   run: |
-      #     helm package ./kbatch-proxy/helm/kbatch-proxy
-      # - name: Publish chart
-      #   run: |
-      #     # TODO: figure out versioning
-      #     helm push kbatch-proxy-0.1.0.tgz oci://${{ env.REGISTRY }}/{{ env.HELM_NAME }}
