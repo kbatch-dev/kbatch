@@ -39,9 +39,9 @@ At a minimum, jobs require
 3. A container `image` to use (consider matching the one used on your Hub, perhaps one from [pangeo-docker-images] or [planetary-computer-containers])
 
 
-```console
+```{code-block} console
 $ kbatch job submit --name=list-files \
-    --command='["ls", "-lh"] \
+    --command='["ls", "-lh"]' \
     --image=alpine
 ```
 
@@ -57,8 +57,7 @@ $ kbatch job submit --name=test \
 
 Rather than providing all those arguments on the command-line, you can create a [YAML] configuration file.
 
-```console
-$ cat config.yaml
+```yaml
 # file: config.yaml
 name: "my-job"
 command:
@@ -66,7 +65,11 @@ command:
   - script.sh
 image: "mcr.microsoft.com/planetary-computer/python:latest"
 code: "script.sh"
+```
 
+And provide it lie
+
+```console
 $ kbatch job submit -f config.yaml
 ```
 
@@ -75,8 +78,11 @@ Get the full help
 ```{click} kbatch.cli:cli
 ---
 prog: kbatch
-show-nested: true
 ---
 ```
 
-[kbatch-proxy]: 
+[kbatch-proxy]: kbatch-proxy.md
+
+```{toctree}
+kbatch-proxy
+```
