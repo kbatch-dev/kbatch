@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Optional, Dict, Union
 
+import rich.table
 import httpx
 import urllib.parse
 
@@ -29,7 +30,7 @@ def load_config() -> Dict[str, Optional[str]]:
     return config
 
 
-def _handle_url(kbatch_url: Optional[str], config: Dict[str, Optional[str]]) -> str:
+def handle_url(kbatch_url: Optional[str], config: Dict[str, Optional[str]]) -> str:
     """
     Resolve the URL, with the following order:
 
@@ -50,7 +51,7 @@ def _handle_url(kbatch_url: Optional[str], config: Dict[str, Optional[str]]) -> 
 
 def configure(kbatch_url=None, token=None) -> Path:
     token = token or os.environ.get("JUPYTERHUB_API_TOKEN")
-    kbatch_url = _handle_url(kbatch_url, config={"kbatch_url": None})
+    kbatch_url = handle_url(kbatch_url, config={"kbatch_url": None})
 
     client = httpx.Client(follow_redirects=True)
 
@@ -75,7 +76,7 @@ def show_job(job_name, kbatch_url, token):
     config = load_config()
 
     token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
-    kbatch_url = _handle_url(kbatch_url, config)
+    kbatch_url = handle_url(kbatch_url, config)
 
     headers = {
         "Authorization": f"token {token}",
@@ -94,7 +95,7 @@ def list_jobs(kbatch_url, token):
     config = load_config()
 
     token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
-    kbatch_url = _handle_url(kbatch_url, config)
+    kbatch_url = handle_url(kbatch_url, config)
 
     headers = {
         "Authorization": f"token {token}",
@@ -111,7 +112,7 @@ def logs(job_name, kbatch_url, token):
 
     client = httpx.Client(follow_redirects=True)
     token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
-    kbatch_url = _handle_url(kbatch_url, config)
+    kbatch_url = handle_url(kbatch_url, config)
 
     headers = {
         "Authorization": f"token {token}",
@@ -136,7 +137,7 @@ def submit_job(
 
     client = httpx.Client(follow_redirects=True)
     token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
-    kbatch_url = _handle_url(kbatch_url, config)
+    kbatch_url = handle_url(kbatch_url, config)
 
     headers = {
         "Authorization": f"token {token}",
@@ -158,3 +159,29 @@ def submit_job(
     r.raise_for_status()
 
     return r.json()
+
+
+def status(row):
+    if row["status"]["active"]:
+        return "active"
+    elif row["status"]["failed"]:
+        return "[red]failed[/red]"
+    elif row["status"]["succeeded"]:
+        return "[green]done[/green]"
+    else:
+        raise ValueError
+
+
+def format_jobs(data):
+    table = rich.table.Table(title="Jobs")
+
+    table.add_column("name", style="bold", no_wrap=True)
+    table.add_column("submitted")
+    table.add_column("status")
+
+    for row in data["items"]:
+        table.add_row(
+            row["metadata"]["name"], row["metadata"]["creation_timestamp"], status(row)
+        )
+
+    return table

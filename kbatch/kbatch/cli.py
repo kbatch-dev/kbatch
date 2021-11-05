@@ -40,9 +40,20 @@ def show(job_name, kbatch_url, token):
 @job.command()
 @click.option("--kbatch-url", help="URL to the kbatch server.")
 @click.option("--token", help="File to execute.")
-def list(kbatch_url, token):
+@click.option(
+    "-o",
+    "--output",
+    help="output format",
+    type=click.Choice(["json", "table"]),
+    default="json",
+)
+def list(kbatch_url, token, output):
     result = _core.list_jobs(kbatch_url, token)
-    rich.print_json(data=result)
+
+    if output == "json":
+        rich.print_json(data=result)
+    elif output == "table":
+        rich.print(_core.format_jobs(result))
 
 
 @job.command()
