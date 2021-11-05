@@ -88,24 +88,24 @@ def tmp_env(key, value):
 
 def test_handle_url():
     config = {"kbatch_url": "http://kbatch-config.com/"}
-    result = kbatch._core._handle_url("http://kbatch.com/", config)
+    result = kbatch._core.handle_url("http://kbatch.com/", config)
     assert result == "http://kbatch.com/"
 
-    result = kbatch._core._handle_url("http://kbatch.com", config)
+    result = kbatch._core.handle_url("http://kbatch.com", config)
     assert result == "http://kbatch.com/"
 
     with tmp_env("KBATCH_URL", "http://kbatch-env.com/"):
-        result = kbatch._core._handle_url(None, config)
+        result = kbatch._core.handle_url(None, config)
         assert result == "http://kbatch-env.com/"
 
-        result = kbatch._core._handle_url("http://kbatch.com/", config)
+        result = kbatch._core.handle_url("http://kbatch.com/", config)
         assert result == "http://kbatch.com/"
 
-    result = kbatch._core._handle_url(None, config)
+    result = kbatch._core.handle_url(None, config)
     assert result == "http://kbatch-config.com/"
 
     with pytest.raises(ValueError, match="Must specify"):
-        kbatch._core._handle_url(None, config={"kbatch_url": None})
+        kbatch._core.handle_url(None, config={"kbatch_url": None})
 
 
 # These tests mock out the server component. They aren't really testing much.
