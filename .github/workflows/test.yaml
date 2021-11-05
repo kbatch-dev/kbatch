@@ -2,10 +2,9 @@ name: Test
 
 on:
   push:
-    branches: [ "*" ]
+    branches: [ "main" ]
   pull_request:
-    branches:
-      - main
+    branches: [ "main" ]
 
 env:
   commit_msg: ${{ github.event.head_commit.message }}
