@@ -2,7 +2,7 @@
 
 Submit batch jobs to Kubernetes. Complements JupyterHub's support for interactive computing on Kubernetes.
 
-This document how users can use `kbatch` to submit jobs. For documentation on setting up kbatch, see [kbatch-proxy][kbatch-proxy]
+This repository contains two packages: [`kbatch`](./kbatch) is for users, [`kbatch-proxy`](./kbatch-proxy) is for administrators deploying kbatch for their users.
 
 ## Install
 
@@ -21,7 +21,6 @@ $ kbatch configure --kbatch-url="https://url-to-kbatch-server" --token="<JUPYTER
 ```
 
 This will create configuration file that specifies the default URL and credentials to use for all `kbatch` operations.
-
 
 ### Submit a job
 

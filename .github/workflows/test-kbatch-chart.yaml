@@ -64,7 +64,8 @@ jobs:
 
       - name: Install chart and await readiness
         run: |
-          helm install kbatch-proxy ./kbatch-proxy/helm/kbatch-proxy 
+          # TODO: bump pin
+          helm install kbatch-proxy ./kbatch-proxy/helm/kbatch-proxy  --set image.tag=0.1.11
 
           . ci/common
           full_namespace_await

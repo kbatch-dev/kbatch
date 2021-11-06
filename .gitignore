@@ -3,3 +3,5 @@ __pycache__
 .kubeconfig
 htmlcov
 .coverage
+dist/
+docs/build

@@ -6,13 +6,13 @@ from ._types import Job
 from ._backend import make_job
 
 
-__version__ = "0.0.1"
+__version__ = "0.2.0"
 
 __all__ = [
+    "__version__",
     "Job",
     "list_jobs",
     "submit_job",
-    "__version__",
     "make_job",
     "configure",
     "show_job",
