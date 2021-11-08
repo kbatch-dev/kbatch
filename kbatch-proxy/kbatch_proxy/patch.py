@@ -145,15 +145,22 @@ def namespace_for_username(username: str) -> str:
     return re.sub(r"[^a-z0-9]", "-", username.lower())
 
 
+def add_job_ttl_seconds_after_finished(
+    job: V1Job, ttl_seconds_after_finished: Optional[int]
+) -> None:
+    job.spec.ttl_seconds_after_finished = ttl_seconds_after_finished
+
+
 def patch(
     job: V1Job,
     config_map: Optional[V1ConfigMap],
     *,
-    annotations,
-    labels,
     username: str,
+    annotations: Optional[Dict[str, str]] = None,
+    labels: Optional[Dict[str, str]] = None,
     extra_env: Optional[Dict[str, str]] = None,
     api_token: Optional[str] = None,
+    ttl_seconds_after_finished: Optional[int] = 3600,
 ) -> None:
     """
     Updates the Job inplace with the following modifications:
@@ -163,12 +170,16 @@ def patch(
     * Sets the namespace of the job (and all containers) and ConfigMap to `namespacee`
     * Adds the ConfigMap as a volume for the Job's container
     """
+    annotations = annotations or {}
+    labels = labels or {}
     extra_env = extra_env or {}
 
     add_annotations(job, annotations, username)
     add_labels(job, labels, username)
     add_namespace(job, namespace_for_username(username))
     add_extra_env(job, extra_env, api_token)
+    add_job_ttl_seconds_after_finished(job, ttl_seconds_after_finished)
+
     if config_map:
         add_namespace_configmap(config_map, namespace_for_username(username))
         add_unzip_init_container(job)

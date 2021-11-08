@@ -167,3 +167,10 @@ def test_extra_env(job_env, k8s_job: kubernetes.client.V1Job):
         ]
 
     assert k8s_job.spec.template.spec.containers[0].env == expected
+
+
+def test_set_job_ttl_seconds_after_finished(k8s_job: kubernetes.client.V1Job):
+    kbatch_proxy.patch.patch(
+        k8s_job, None, username="foo", ttl_seconds_after_finished=10
+    )
+    assert k8s_job.spec.ttl_seconds_after_finished == 10

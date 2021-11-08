@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     # lazy prefix handling. Will want to put nginx in front of this.
     kbatch_prefix: str = ""
 
+    # Jobs are cleaned up by Kubernetes after this many seconds.
+    kbatch_job_ttl_seconds_after_finished: Optional[int] = 3600
     # Additional environment variables to set in the job environment
     kbatch_job_extra_env: Optional[Dict[str, str]] = None
 
@@ -155,6 +157,7 @@ async def create_job(request: Request, user: User = Depends(get_current_user)):
         annotations={},
         labels={},
         username=user.name,
+        ttl_seconds_after_finished=settings.kbatch_job_ttl_seconds_after_finished,
         extra_env=settings.kbatch_job_extra_env,
         api_token=user.api_token,
     )
