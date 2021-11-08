@@ -65,7 +65,7 @@ jobs:
           twine upload dist/*
           cd ..
 
-          cd kbatch-server
+          cd kbatch-proxy
           python -m build
           twine upload dist/*
 
@@ -79,6 +79,6 @@ jobs:
           twine upload dist/*
           cd ..
 
-          cd kbatch-server
+          cd kbatch-proxy
           python -m build
           twine upload dist/*
