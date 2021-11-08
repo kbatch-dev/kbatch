@@ -63,22 +63,13 @@ jobs:
           cd kbatch
           python -m build
           twine upload dist/*
-          cd ..
-
-          cd kbatch-proxy
-          python -m build
-          twine upload dist/*
 
       - name: Build and publish kbatch-proxy
         env:
           TWINE_USERNAME: "__token__"
           TWINE_PASSWORD: ${{ secrets.KBATCH_PROXY_PYPI_PASSWORD }}
         run: |
-          cd kbatch
-          python -m build
-          twine upload dist/*
-          cd ..
-
           cd kbatch-proxy
           python -m build
           twine upload dist/*
+          cd ..
