@@ -46,15 +46,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Publish Helm charts
-        uses: stefanprodan/helm-gh-pages@master
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          charts_dir: "kbatch-proxy/helm"
-          charts_url: https://kbatch-dev.github.io/kbatch/
-          linting: "off"
-          chart_version: ${{ steps.get_version.outputs.VERSION }}
-
       - name: Set up Python 3.x
         uses: actions/setup-python@v2
         with:
