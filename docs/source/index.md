@@ -26,67 +26,25 @@ Your Kubernetes / JupyterHub administrator might have deployed `kbatch` alongsid
 If this is the case, you can configure `kbatch` default URL and JupyterHub API token to use for all
 of its operations..
 
-You can generate API token logging in and visiting the token generation page, typically at `<JUPYTERHUB_URL>/hub/token`. Provide this token in place of `<JUPYTERHUB_TOKEN>` below:
+You can generate API token logging in and visiting the token generation page, typically at `<JUPYTERHUB_URL>/hub/token`. Provide this token in place of `<JUPYTERHUB_TOKEN>` below.
+
+Additionally, your JupyterHub admin might have deployed `kbatch` as a [JupyterHub service][jhub-service].
+If so, then you can submit jobs and make requests at the URL `<JUPYTERHUB_URL>/services/kbatch`. Use that in place of `<url-to-kbatch-server>` below.
 
 ```
-$ kbatch configure --kbatch-url="https://url-to-kbatch-server" --token="<JUPYTERHUB_TOKEN>"
+$ kbatch configure --kbatch-url="https://<url-to-kbatch-server>" --token="<JUPYTERHUB_TOKEN>"
 ```
 
 This will create configuration file that specifies the default URL and credentials to use for all `kbatch` operations.
 
-### Submit a job
+## Next steps
 
-At a minimum, jobs require
-
-1. A `name` to identify the job.
-2. A `command` to run, as a list of strings (e.g. `["ls"]` or `["papermill", "my-notebook.ipynb"]`).
-3. A container `image` to use (consider matching the one used on your Hub, perhaps one from [pangeo-docker-images] or [planetary-computer-containers])
-
-
-```{code-block} console
-$ kbatch job submit --name=list-files \
-    --command='["ls", "-lh"]' \
-    --image=alpine
-```
-
-Additionally, you can provide code (either a directory or a single file) to make available on the server
-for your Job.
-
-```console
-$ kbatch job submit --name=test \
-    --image="mcr.microsoft.com/planetary-computer/python" \
-    --command='["papermill", "notebook.ipynb"]' \
-    --file=notebook.ipynb
-```
-
-Rather than providing all those arguments on the command-line, you can create a [YAML] configuration file.
-
-```yaml
-# file: config.yaml
-name: "my-job"
-command:
-  - sh
-  - script.sh
-image: "mcr.microsoft.com/planetary-computer/python:latest"
-code: "script.sh"
-```
-
-And provide it lie
-
-```console
-$ kbatch job submit -f config.yaml
-```
-
-Get the full help
-
-```{click} kbatch.cli:cli
----
-prog: kbatch
----
-```
+For more on how to use `kbatch`, see the [User guide](./user-guide.md)
 
 [kbatch-proxy]: kbatch-proxy.md
+[jhub-service]: https://z2jh.jupyter.org/en/latest/administrator/services.html
 
 ```{toctree}
+user-guide
 kbatch-proxy
 ```
