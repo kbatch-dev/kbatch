@@ -20,9 +20,13 @@ For user-facing documentation, stay here. Administrators looking to deploy `kbat
 pip install kbatch
 ```
 
-## Usage
+## Configure with JupyterHub deployment
 
-`kbatch` is typically uses JupyterHub for authentication, so you'll first need an API token. You can generate one by logging in and visiting the token generation page, typically at `<JUPYTERHUB_URL>/hub/token`. Provide this token in place of `<JUPYTERHUB_TOKEN>` below:
+Your Kubernetes / JupyterHub administrator might have deployed `kbatch` alongside your JupyterHub.
+If this is the case, you can configure `kbatch` default URL and JupyterHub API token to use for all
+of its operations..
+
+You can generate API token logging in and visiting the token generation page, typically at `<JUPYTERHUB_URL>/hub/token`. Provide this token in place of `<JUPYTERHUB_TOKEN>` below:
 
 ```
 $ kbatch configure --kbatch-url="https://url-to-kbatch-server" --token="<JUPYTERHUB_TOKEN>"
