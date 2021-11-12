@@ -22,7 +22,7 @@ copyright = "2021, Tom Augspurger"
 author = "Tom Augspurger"
 
 # The full version, including alpha/beta/rc tags
-release = "0.2.5"
+release = "0.2.7"
 
 
 # -- General configuration ---------------------------------------------------
