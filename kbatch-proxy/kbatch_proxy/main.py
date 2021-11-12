@@ -244,10 +244,11 @@ def authorized(user: User = Depends(get_current_user)) -> UserOut:
 app.include_router(router)
 
 
-@app.get("/")
-async def app_root():
-    logger.info("get-app")
-    return {"message": "kbatch"}
+if settings.kbatch_prefix:
+
+    @app.get("/")
+    async def app_root():
+        return {"message": "kbatch"}
 
 
 # -------
