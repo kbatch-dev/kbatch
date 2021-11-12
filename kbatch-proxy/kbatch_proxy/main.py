@@ -233,7 +233,7 @@ async def logs(job_name: str, user: User = Depends(get_current_user)):
 @router.get("/")
 def get_root():
     logger.info("get-router")
-    return {"message": "kbatch-prefix"}
+    return {"message": "kbatch"}
 
 
 @router.get("/authorized")
