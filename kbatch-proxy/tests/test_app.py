@@ -18,7 +18,7 @@ def mock_hub_auth(mocker):
 def test_read_main():
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json() == {"message": "kbatch"}
+    assert response.json() == {"message": "kbatch-prefix"}
 
 
 @pytest.mark.usefixtures("mock_hub_auth")
