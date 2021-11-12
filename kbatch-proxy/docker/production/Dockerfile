@@ -4,6 +4,13 @@ WORKDIR /code
 
 COPY ./requirements.txt /code/requirements.txt
 RUN pip install --no-cache-dir --upgrade -r requirements.txt
+COPY ./docker/production/gunicorn_conf.py /code/
 COPY ./kbatch_proxy /code/kbatch_proxy
 
-CMD ["uvicorn", "kbatch_proxy.main:app", "--host", "0.0.0.0", "--port", "80"]
+ENV APP_HOST=0.0.0.0
+ENV APP_PORT=80
+
+# Do not use --preload, because it doesn't work correctly with OpenCensus
+CMD gunicorn kbatch_proxy.main:app -k uvicorn.workers.UvicornWorker \
+    -c /code/gunicorn_conf.py \
+    --bind ${APP_HOST}:${APP_PORT} --log-level info

@@ -31,6 +31,7 @@ class Settings(BaseSettings):
 
     jupyterhub_api_token: str = "super-secret"
     jupyterhub_service_prefix: str = "/"
+    kbatch_init_logging: bool = True
     # lazy prefix handling. Will want to put nginx in front of this.
     kbatch_prefix: str = ""
 
@@ -48,6 +49,16 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+if settings.kbatch_init_logging:
+    import rich.logging
+
+    handler = rich.logging.RichHandler()
+    logger.setLevel(logging.INFO)
+    handler.setLevel(logging.INFO)
+    handler.setFormatter(
+        logging.Formatter("%(asctime)s:%(levelname)s:%(name)s:%(lineno)s:%(message)s")
+    )
+    logger.addHandler(handler)
 
 app = FastAPI()
 router = APIRouter(prefix=settings.kbatch_prefix)
@@ -221,6 +232,7 @@ async def logs(job_name: str, user: User = Depends(get_current_user)):
 
 @router.get("/")
 def get_root():
+    logger.info("get-router")
     return {"message": "kbatch"}
 
 
