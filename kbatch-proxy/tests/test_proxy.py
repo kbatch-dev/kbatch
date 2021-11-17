@@ -174,3 +174,25 @@ def test_set_job_ttl_seconds_after_finished(k8s_job: kubernetes.client.V1Job):
         k8s_job, None, username="foo", ttl_seconds_after_finished=10
     )
     assert k8s_job.spec.ttl_seconds_after_finished == 10
+
+
+def test_add_node_affinity(k8s_job: kubernetes.client.V1Job):
+    kbatch_proxy.patch.patch(
+        k8s_job,
+        None,
+        username="foo",
+        job_node_affinity_required_label_key="hub.jupyter.org/node-purpose",
+        job_node_affinity_required_label_value="user",
+    )
+
+    node_affinity = k8s_job.spec.template.spec.affinity.node_affinity
+    terms = (
+        node_affinity.required_during_scheduling_ignored_during_execution.node_selector_terms[
+            0
+        ]
+        .node_selector_terms[0]
+        .match_expressions[0]
+    )
+    assert terms.key == "hub.jupyter.org/node-purpose"
+    assert terms.operator == "In"
+    assert terms.values == ["user"]

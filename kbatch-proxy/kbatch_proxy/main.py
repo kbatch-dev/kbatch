@@ -35,13 +35,16 @@ class Settings(BaseSettings):
     # lazy prefix handling. Will want to put nginx in front of this.
     kbatch_prefix: str = ""
 
+    kbatch_job_node_affinity_required_label_key: Optional[str] = None
+    kbatch_job_node_affinity_required_label_value: Optional[str] = None
+
     # Jobs are cleaned up by Kubernetes after this many seconds.
     kbatch_job_ttl_seconds_after_finished: Optional[int] = 3600
     # Additional environment variables to set in the job environment
     kbatch_job_extra_env: Optional[Dict[str, str]] = None
 
     # Whether to automatically create new namespaces for a users
-    kbatch_create_user_namepsace: bool = True
+    kbatch_create_user_namespace: bool = True
 
     class Config:
         env_file = os.environ.get("KBATCH_SETTINGS_PATH", ".env")
@@ -59,6 +62,21 @@ if settings.kbatch_init_logging:
         logging.Formatter("%(asctime)s:%(levelname)s:%(name)s:%(lineno)s:%(message)s")
     )
     logger.addHandler(handler)
+
+if (
+    settings.kbatch_job_node_affinity_required_label_key
+    and settings.kbatch_job_node_affinity_required_label_value
+):
+    pass
+elif (
+    settings.kbatch_job_node_affinity_required_label_key
+    or settings.kbatch_job_node_affinity_required_label_value
+):
+    raise ValueError(
+        "Must specify either both or neither of kbatch_job_node_affinity_required_label_key "
+        "and kbatch_job_node_affinity_required_label_value"
+    )
+
 
 app = FastAPI()
 router = APIRouter(prefix=settings.kbatch_prefix)
@@ -162,6 +180,9 @@ async def create_job(request: Request, user: User = Depends(get_current_user)):
     else:
         config_map = None
 
+    node_key = settings.kbatch_job_node_affinity_required_label_key
+    node_value = settings.kbatch_job_node_affinity_required_label_value
+
     patch.patch(
         job,
         config_map,
@@ -171,6 +192,8 @@ async def create_job(request: Request, user: User = Depends(get_current_user)):
         ttl_seconds_after_finished=settings.kbatch_job_ttl_seconds_after_finished,
         extra_env=settings.kbatch_job_extra_env,
         api_token=user.api_token,
+        job_node_affinity_required_label_key=node_key,
+        job_node_affinity_required_label_value=node_value,
     )
 
     # What needs to happen when? We have a few requirements
@@ -192,7 +215,7 @@ async def create_job(request: Request, user: User = Depends(get_current_user)):
         )
         patch.add_submitted_configmap_name(job, config_map)
 
-    if settings.kbatch_create_user_namepsace:
+    if settings.kbatch_create_user_namespace:
         logger.info("Ensuring namespace %s", user.namespace)
         created = ensure_namespace(api, user.namespace)
         if created:
