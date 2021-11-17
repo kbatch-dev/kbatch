@@ -16,10 +16,48 @@ from kubernetes.client.models import (
     V1KeyToPath,
     V1OwnerReference,
     V1EnvVar,
+    V1Affinity,
+    V1NodeAffinity,
+    V1NodeSelector,
+    V1NodeSelectorTerm,
+    V1NodeSelectorRequirement,
 )
 
 
 SAFE_CHARS = set(string.ascii_lowercase + string.digits)
+
+
+def add_node_affinity(
+    job: V1Job,
+    job_node_affinity_required_label_key: str,
+    job_node_affinity_required_label_value: str,
+) -> None:
+    if job_node_affinity_required_label_value and job_node_affinity_required_label_key:
+        affinity = V1Affinity(
+            node_affinity=V1NodeAffinity(
+                required_during_scheduling_ignored_during_execution=V1NodeSelector(
+                    node_selector_terms=[
+                        V1NodeSelector(
+                            node_selector_terms=[
+                                V1NodeSelectorTerm(
+                                    match_expressions=[
+                                        V1NodeSelectorRequirement(
+                                            key=job_node_affinity_required_label_key,
+                                            operator="In",
+                                            values=[
+                                                job_node_affinity_required_label_value
+                                            ],
+                                        )
+                                    ]
+                                )
+                            ]
+                        )
+                    ]
+                )
+            )
+        )
+        pod_spec = job.spec.template.spec
+        pod_spec.affinity = affinity
 
 
 def add_annotations(job: V1Job, annotations, username: str) -> None:
@@ -161,6 +199,8 @@ def patch(
     extra_env: Optional[Dict[str, str]] = None,
     api_token: Optional[str] = None,
     ttl_seconds_after_finished: Optional[int] = 3600,
+    job_node_affinity_required_label_key: Optional[str] = None,
+    job_node_affinity_required_label_value: Optional[str] = None,
 ) -> None:
     """
     Updates the Job inplace with the following modifications:
@@ -175,6 +215,11 @@ def patch(
     extra_env = extra_env or {}
 
     add_annotations(job, annotations, username)
+    add_node_affinity(
+        job,
+        job_node_affinity_required_label_key,
+        job_node_affinity_required_label_value,
+    )
     add_labels(job, labels, username)
     add_namespace(job, namespace_for_username(username))
     add_extra_env(job, extra_env, api_token)
