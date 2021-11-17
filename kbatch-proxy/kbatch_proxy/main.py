@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     kbatch_job_extra_env: Optional[Dict[str, str]] = None
 
     # Whether to automatically create new namespaces for a users
-    kbatch_create_user_namepsace: bool = True
+    kbatch_create_user_namespace: bool = True
 
     class Config:
         env_file = os.environ.get("KBATCH_SETTINGS_PATH", ".env")
@@ -192,7 +192,7 @@ async def create_job(request: Request, user: User = Depends(get_current_user)):
         )
         patch.add_submitted_configmap_name(job, config_map)
 
-    if settings.kbatch_create_user_namepsace:
+    if settings.kbatch_create_user_namespace:
         logger.info("Ensuring namespace %s", user.namespace)
         created = ensure_namespace(api, user.namespace)
         if created:
