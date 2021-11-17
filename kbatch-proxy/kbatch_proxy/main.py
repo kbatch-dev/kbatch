@@ -192,8 +192,8 @@ async def create_job(request: Request, user: User = Depends(get_current_user)):
         ttl_seconds_after_finished=settings.kbatch_job_ttl_seconds_after_finished,
         extra_env=settings.kbatch_job_extra_env,
         api_token=user.api_token,
-        kbatch_job_node_affinity_required_label_key=node_key,
-        kbatch_job_node_affinity_required_label_value=node_value,
+        job_node_affinity_required_label_key=node_key,
+        job_node_affinity_required_label_value=node_value,
     )
 
     # What needs to happen when? We have a few requirements

@@ -29,8 +29,8 @@ SAFE_CHARS = set(string.ascii_lowercase + string.digits)
 
 def add_node_affinity(
     job: V1Job,
-    job_node_affinity_required_label_key: str,
-    job_node_affinity_required_label_value: str,
+    job_node_affinity_required_label_key: Optional[str],
+    job_node_affinity_required_label_value: Optional[str],
 ) -> None:
     if job_node_affinity_required_label_value and job_node_affinity_required_label_key:
         affinity = V1Affinity(
