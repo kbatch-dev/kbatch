@@ -22,39 +22,6 @@ from kubernetes.client.models import (
 SAFE_CHARS = set(string.ascii_lowercase + string.digits)
 
 
-# def add_node_affinity(
-#     job: V1Job,
-#     job_node_affinity_required_label_key: Optional[str],
-#     job_node_affinity_required_label_value: Optional[str],
-# ) -> None:
-#     if job_node_affinity_required_label_value and job_node_affinity_required_label_key:
-#         affinity = V1Affinity(
-#             node_affinity=V1NodeAffinity(
-#                 required_during_scheduling_ignored_during_execution=V1NodeSelector(
-#                     node_selector_terms=[
-#                         V1NodeSelector(
-#                             node_selector_terms=[
-#                                 V1NodeSelectorTerm(
-#                                     match_expressions=[
-#                                         V1NodeSelectorRequirement(
-#                                             key=job_node_affinity_required_label_key,
-#                                             operator="In",
-#                                             values=[
-#                                                 job_node_affinity_required_label_value
-#                                             ],
-#                                         )
-#                                     ]
-#                                 )
-#                             ]
-#                         )
-#                     ]
-#                 )
-#             )
-#         )
-#         pod_spec = job.spec.template.spec
-#         pod_spec.affinity = affinity
-
-
 def add_annotations(job: V1Job, annotations, username: str) -> None:
     annotations = dict(annotations)
     annotations["kbatch.jupyter.org/username"] = username
