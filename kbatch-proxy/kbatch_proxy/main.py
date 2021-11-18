@@ -67,6 +67,12 @@ if settings.kbatch_job_template_file:
     logger.info("loading job template from %s", settings.kbatch_job_template_file)
     with open(settings.kbatch_job_template_file) as f:
         job_template = yaml.safe_load(f)
+
+    # parse with Kubernetes to normalize keys with job_data
+    job_template = utils.parse(
+        job_template, model=kubernetes.client.models.V1Job
+    ).to_dict()
+
 else:
     job_template = None
 

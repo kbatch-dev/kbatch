@@ -184,8 +184,12 @@ def test_set_job_ttl_seconds_after_finished(k8s_job: kubernetes.client.V1Job):
 
 def test_add_node_affinity(k8s_job: kubernetes.client.V1Job):
     job_template = yaml.safe_load((HERE / "job_template.yaml").read_text())
+    job_template = kbatch_proxy.utils.parse(
+        job_template, kubernetes.client.V1Job
+    ).to_dict()
 
     job_data = k8s_job.to_dict()
+
     result = kbatch_proxy.utils.merge_json_objects(job_data, job_template)
     result = kbatch_proxy.utils.parse(result, kubernetes.client.V1Job)
 
@@ -198,3 +202,5 @@ def test_add_node_affinity(k8s_job: kubernetes.client.V1Job):
     assert terms.key == "hub.jupyter.org/node-purpose"
     assert terms.operator == "In"
     assert terms.values == ["user"]
+    assert job_data["spec"]["backoff_limit"] == 4  # overridden by template
+    assert result.spec.backoff_limit == 0  # overridden by template

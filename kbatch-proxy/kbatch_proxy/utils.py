@@ -23,6 +23,9 @@ def parse(d, model):
             # node_affinity -> nodeAffinity
             field = model.attribute_map[field]
         value = d.get(field, None)  # is this a good default?
+        if field == "containers" and value is None:
+            # evidently that's not a good default for V1PodSpec at least.
+            value = []
         if value is None:
             parsed[field] = value
         elif type_ in basic_types:
