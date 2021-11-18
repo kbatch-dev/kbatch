@@ -140,7 +140,7 @@ def make_job(
         kind="Job",
         metadata=job_metadata,
         spec=V1JobSpec(
-            template=template, backoff_limit=4, ttl_seconds_after_finished=300
+            template=template, backoff_limit=0, ttl_seconds_after_finished=300
         ),
     )
     return job
