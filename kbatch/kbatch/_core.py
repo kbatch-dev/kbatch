@@ -1,3 +1,4 @@
+import datetime
 import base64
 import os
 import json
@@ -162,26 +163,50 @@ def submit_job(
 
 
 def status(row):
-    if row["status"]["active"]:
-        return "active"
+    if row["status"]["succeeded"]:
+        return "[green]done[/green]"
     elif row["status"]["failed"]:
         return "[red]failed[/red]"
-    elif row["status"]["succeeded"]:
-        return "[green]done[/green]"
+    elif row["status"]["active"]:
+        return "active"
     else:
         raise ValueError
+
+
+def duration(row):
+    start_time = datetime.datetime.fromisoformat(row["status"]["start_time"])
+    end_time: Optional[datetime.timedelta] = None
+
+    if row["status"]["succeeded"]:
+        end_time = datetime.datetime.fromisoformat(row["status"]["completion_time"])
+    elif row["status"]["failed"]:
+        end_time = None
+    else:
+        end_time = datetime.datetime.now(tz=datetime.timezone.utc)
+
+    if end_time:
+        duration = end_time - start_time
+        # round for formatting
+        duration = duration - datetime.timedelta(microseconds=duration.microseconds)
+    else:
+        duration = "-"
+    return str(duration)
 
 
 def format_jobs(data):
     table = rich.table.Table(title="Jobs")
 
-    table.add_column("name", style="bold", no_wrap=True)
+    table.add_column("job name", style="bold", no_wrap=True)
     table.add_column("submitted")
     table.add_column("status")
+    table.add_column("duration")
 
     for row in data["items"]:
         table.add_row(
-            row["metadata"]["name"], row["metadata"]["creation_timestamp"], status(row)
+            row["metadata"]["name"],
+            row["metadata"]["creation_timestamp"],
+            status(row),
+            duration(row),
         )
 
     return table
