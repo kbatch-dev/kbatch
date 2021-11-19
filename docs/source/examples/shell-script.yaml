@@ -1,0 +1,6 @@
+name: "my-job"
+code: "shell-script.sh"
+command:
+  - sh
+  - shell-script.sh
+image: "mcr.microsoft.com/planetary-computer/python:latest"

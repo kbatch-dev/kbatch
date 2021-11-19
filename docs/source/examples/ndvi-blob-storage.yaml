@@ -1,6 +1,6 @@
 name: "ndvi-job"
-code: "ndvi-job.py"
+code: "ndvi-blob-storage.py"
 args:
   - "python"
-  - "ndvi-job.py"
+  - "ndvi-blob-storage.py"
 image: "mcr.microsoft.com/planetary-computer/python:latest"
