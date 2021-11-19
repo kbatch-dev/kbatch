@@ -1,0 +1,7 @@
+# file: dask-gateway-job.yaml
+name: dask-gateway-job
+image: mcr.microsoft.com/planetary-computer/python:latest
+args:
+  - python
+  - dask-gateway.py
+code: dask-gateway.py
