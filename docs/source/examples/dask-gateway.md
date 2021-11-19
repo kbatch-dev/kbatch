@@ -4,8 +4,6 @@ This example shows how to start and manage a Dask cluster on a hub that is deplo
 
 It uses the [Microsoft Planetary Computer Hub][pc], but should work on any Hub with Dask Gateway.
 
-## Example
-
 We use this job configuration file:
 
 ```{literalinclude} dask-gateway-job.yaml
