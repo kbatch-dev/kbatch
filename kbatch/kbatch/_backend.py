@@ -16,11 +16,16 @@ from kubernetes.client.models import (
     V1PodSpec,
     V1PodTemplateSpec,
     V1ObjectMeta,
-    # V1Toleration,
+    V1Toleration,
     V1ResourceRequirements,
     V1EnvVar,
     V1Container,
     V1ConfigMap,
+    V1Affinity,
+    V1NodeAffinity,
+    V1NodeSelector,
+    V1NodeSelectorTerm,
+    V1NodeSelectorRequirement,
 )
 
 from ._types import Job
@@ -41,12 +46,19 @@ SAFE_CHARS = set(string.ascii_lowercase + string.digits)
 
 def make_job(
     job: Job,
+    profile: Optional[dict] = None,
 ) -> V1Job:
     """
     Make a Kubernetes pod specification for a user-submitted job.
     """
+    profile = profile or {}
     name = job.name  # TODO: deduplicate somehow...
-    image = job.image
+    image = job.image or profile.get("image", None)
+    if image is None:
+        raise TypeError(
+            "Must specify 'image', either with `--image` or from the profile."
+        )
+
     command = job.command
     args = job.args
 
@@ -81,22 +93,17 @@ def make_job(
         working_dir="/code",
     )
 
+    resources = profile.get("resources", {})
+    limits = resources.get("limits", {})
+    requests = resources.get("requests", {})
+
     container.resources.requests = {}
+    container.resources.limits = {}
 
-    # if k8s_config.cpu_guarantee:
-    #     container.resources.requests["cpu"] = k8s_config.cpu_guarantee
-    # if k8s_config.mem_guarantee:
-    #     container.resources.requests["memory"] = k8s_config.mem_guarantee
-    # if k8s_config.extra_resource_guarantees:
-    #     container.resources.requests.update(k8s_config.extra_resource_guarantees)
-
-    # container.resources.limits = {}
-    # if k8s_config.cpu_limit:
-    #     container.resources.limits["cpu"] = k8s_config.cpu_limit
-    # if k8s_config.mem_limit:
-    #     container.resources.limits["memory"] = k8s_config.mem_limit
-    # if k8s_config.extra_resource_limits:
-    #     container.resources.limits.update(k8s_config.extra_resource_limits)
+    if requests:
+        container.resources.requests.update(requests)
+    if limits:
+        container.resources.limits.update(limits)
 
     pod_metadata = V1ObjectMeta(
         name=f"{name}-pod",
@@ -105,13 +112,48 @@ def make_job(
         annotations=annotations,
     )
     tolerations = None
-    # if k8s_config.tolerations:
-    #     tolerations: Optional[List[Any]] = [
-    #         parse_toleration(v) if isinstance(v, str) else v
-    #         for v in k8s_config.tolerations
-    #     ]
-    # else:
-    #     tolerations = None
+    if profile.get("tolerations", []):
+        tolerations = [V1Toleration(**v) for v in profile["tolerations"]]
+
+    node_affinity_required = profile.get("node_affinity_required", {})
+    if node_affinity_required:
+        match_expressions = []
+        match_fields = []
+        for d in node_affinity_required:
+            for k, affinities in d.items():
+                for v in affinities:
+                    if k == "matchExpressions":
+                        match_expressions.append(
+                            V1NodeSelectorRequirement(
+                                key=v.get("key"),
+                                operator=v.get("operator"),
+                                values=v.get("values"),
+                            )
+                        )
+                    elif k == "matchFields":
+                        match_fields.append(
+                            V1NodeSelectorRequirement(
+                                key=v.get("key"),
+                                operator=v.get("operator"),
+                                values=v.get("values"),
+                            )
+                        )
+                    else:
+                        raise ValueError(
+                            "Key must be 'matchExpressions' or 'matchFields'. Got {k} instead."
+                        )
+
+        node_selector_terms = V1NodeSelectorTerm(
+            match_expressions=match_expressions,
+            match_fields=match_fields,
+        )
+        node_selector = V1NodeSelector(node_selector_terms=[node_selector_terms])
+        node_affinity = V1NodeAffinity(
+            required_during_scheduling_ignored_during_execution=node_selector
+        )
+        affinity = V1Affinity(node_affinity=node_affinity)
+    else:
+        affinity = None
 
     # TODO: verify restart policy
     template = V1PodTemplateSpec(
@@ -121,6 +163,7 @@ def make_job(
             restart_policy="Never",
             # volumes=[file_volume],
             tolerations=tolerations,
+            affinity=affinity,
         ),
         metadata=pod_metadata,
     )

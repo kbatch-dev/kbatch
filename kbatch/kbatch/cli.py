@@ -68,10 +68,13 @@ def list(kbatch_url, token, output):
     "--code",
     help="Local file or directory of source code to make available to the job.",
 )
+@click.option("-p", "--profile", help="Profile name to use. See 'kbatch profiles'.")
 @click.option("-f", "--file", help="Configuration file.")
 @click.option("--kbatch-url", help="URL to the kbatch server.")
 @click.option("--token", help="JupyterHub API token.")
-def submit(file, code, name, description, image, command, args, kbatch_url, token, env):
+def submit(
+    file, code, name, description, image, command, args, profile, kbatch_url, token, env
+):
     """
     Submit a job to run on Kubernetes.
     """
@@ -100,6 +103,8 @@ def submit(file, code, name, description, image, command, args, kbatch_url, toke
         data["env"] = env
 
     code = code or data.pop("code", None)
+    if profile:
+        profile = _core.load_profile(profile, kbatch_url)
 
     job = Job(**data)
 
@@ -108,6 +113,7 @@ def submit(file, code, name, description, image, command, args, kbatch_url, toke
         code=code,
         kbatch_url=kbatch_url,
         token=token,
+        profile=profile,
     )
     rich.print_json(data=result)
 
@@ -125,3 +131,16 @@ def logs(job_name, kbatch_url, token, pretty):
         rich.print(result)
     else:
         print(result)
+
+
+@cli.command()
+@click.option("--kbatch-url")
+def profiles(kbatch_url):
+    """
+    Show the profiles used by the server.
+
+    kbatch administrators can serve profiles at the "/profiles" endpoint with
+    some configuration values for various profiles.
+    """
+    p = _core.show_profiles(kbatch_url)
+    rich.print_json(data=p)

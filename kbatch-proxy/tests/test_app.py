@@ -1,9 +1,14 @@
+import sys
 import pytest
+import pathlib
+import subprocess
 from fastapi.testclient import TestClient
 
 from kbatch_proxy.main import app
 
 client = TestClient(app)
+
+HERE = pathlib.Path(__file__).parent
 
 
 @pytest.fixture
@@ -31,3 +36,11 @@ def test_authorized():
 
     response = client.get("/authorized", headers={"Authorization": "Token abc"})
     assert response.status_code == 200
+
+
+def test_loads_profile():
+    profile = str(HERE / "profile_template.yaml")
+    code = "import asyncio; from kbatch_proxy.main import profiles; assert asyncio.run(profiles())"
+    subprocess.check_output(
+        f"KBATCH_PROFILE_FILE={profile} {sys.executable} -c '{code}'", shell=True
+    )

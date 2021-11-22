@@ -133,7 +133,10 @@ def submit_job(
     code: Optional[Union[str, Path]] = None,
     kbatch_url: Optional[str] = None,
     token: Optional[str] = None,
+    profile: Optional[dict] = None,
 ):
+    from ._backend import make_job
+
     config = load_config()
 
     client = httpx.Client(follow_redirects=True)
@@ -143,7 +146,9 @@ def submit_job(
     headers = {
         "Authorization": f"token {token}",
     }
-    data = job.to_kubernetes().to_dict()
+    # data = job.to_kubernetes().to_dict()
+    profile = profile or {}
+    data = make_job(job, profile=profile).to_dict()
     data = {"job": data}
     if code:
         cm = make_configmap(code, generate_name=job.name).to_dict()
@@ -210,3 +215,22 @@ def format_jobs(data):
         )
 
     return table
+
+
+def show_profiles(kbatch_url):
+    client = httpx.Client(follow_redirects=True)
+    config = load_config()
+
+    kbatch_url = handle_url(kbatch_url, config)
+
+    url = urllib.parse.urljoin(kbatch_url, "profiles/")
+    r = client.get(url)
+    r.raise_for_status()
+
+    return r.json()
+
+
+def load_profile(profile_name: str, kbatch_url: str) -> dict:
+    profiles = show_profiles(kbatch_url)
+    profile = profiles[profile_name]
+    return profile

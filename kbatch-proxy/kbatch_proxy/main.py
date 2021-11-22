@@ -36,7 +36,11 @@ class Settings(BaseSettings):
     # lazy prefix handling. Will want to put nginx in front of this.
     kbatch_prefix: str = ""
 
+    # A path to a YAML file defining a job template
     kbatch_job_template_file: Optional[str] = None
+
+    # A path to a YAML file defining the profiles
+    kbatch_profile_file: Optional[str] = None
 
     # Jobs are cleaned up by Kubernetes after this many seconds.
     kbatch_job_ttl_seconds_after_finished: Optional[int] = 3600
@@ -49,6 +53,22 @@ class Settings(BaseSettings):
     class Config:
         env_file = os.environ.get("KBATCH_SETTINGS_PATH", ".env")
         env_file_encoding = "utf-8"
+
+
+class User(BaseModel):
+    name: str
+    groups: List[str]
+    api_token: Optional[str]
+
+    @property
+    def namespace(self) -> str:
+        """The Kubernetes namespace for a user."""
+        return patch.namespace_for_username(self.name)
+
+
+class UserOut(BaseModel):
+    name: str
+    groups: List[str]
 
 
 settings = Settings()
@@ -77,24 +97,17 @@ else:
     job_template = None
 
 
+if settings.kbatch_profile_file:
+    # TODO: we need some kind of validation on the keys / values here. Catch typos...
+    logger.info("loading profiles from %s", settings.kbatch_profile_file)
+    with open(settings.kbatch_profile_file) as f:
+        profile_data = yaml.safe_load(f)
+else:
+    profile_data = {}
+
+
 app = FastAPI()
 router = APIRouter(prefix=settings.kbatch_prefix)
-
-
-class User(BaseModel):
-    name: str
-    groups: List[str]
-    api_token: Optional[str]
-
-    @property
-    def namespace(self) -> str:
-        """The Kubernetes namespace for a user."""
-        return patch.namespace_for_username(self.name)
-
-
-class UserOut(BaseModel):
-    name: str
-    groups: List[str]
 
 
 # ----------------------------------------------------------------------------
@@ -249,6 +262,11 @@ async def logs(job_name: str, user: User = Depends(get_current_user)):
     #                           namespace=user.namespace):
     #     # TODO: SSE
     #     print(event)
+
+
+@router.get("/profiles/")
+async def profiles():
+    return profile_data
 
 
 @router.get("/")
