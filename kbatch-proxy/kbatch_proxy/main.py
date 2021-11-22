@@ -92,6 +92,7 @@ if settings.kbatch_job_template_file:
     job_template = utils.parse(
         job_template, model=kubernetes.client.models.V1Job
     ).to_dict()
+    utils.remove_nulls(job_template)
 
 else:
     job_template = None

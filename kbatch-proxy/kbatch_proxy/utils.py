@@ -82,3 +82,14 @@ def merge_json_objects(a, b):
             else:
                 a[key] = b_val
     return a
+
+
+def remove_nulls(d):
+    remove = set()
+    for k, v in d.items():
+        if v is None or v == [] or v == {}:
+            remove.add(k)
+        elif isinstance(v, dict):
+            remove_nulls(v)
+    for k in remove:
+        del d[k]
