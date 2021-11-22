@@ -88,6 +88,9 @@ def submit(
     if file:
         data = yaml.safe_load(Path(file).read_text())
 
+    data_profile = data.pop("profile", None)
+    profile = profile or data_profile or {}
+
     if name is not None:
         data["name"] = name
     if description is not None:
