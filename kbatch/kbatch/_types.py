@@ -11,7 +11,7 @@ class User:
 @dataclass()
 class Job:
     name: str
-    image: str
+    image: Optional[str] = None
     command: Optional[List[str]] = None
     args: Optional[List[str]] = None
     upload: Optional[str] = None
