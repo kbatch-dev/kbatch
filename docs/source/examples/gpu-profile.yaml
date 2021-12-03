@@ -1,0 +1,6 @@
+name: "gpu-profile"
+code: "gpu-profile.py"
+profile: "gpu-pytorch"
+args:
+  - "python"
+  - "gpu-profile.py"
