@@ -122,7 +122,8 @@ auth = jupyterhub.services.auth.HubAuth(
 
 
 async def get_current_user(request: Request) -> User:
-    cookie = request.cookies.get(auth.cookie_name)
+    # cookie = request.cookies.get(auth.cookie_name)
+    cookie = None  # TODO: jupyterhub 2.0 compat
     token = request.headers.get(auth.auth_header_name)
 
     if cookie:
