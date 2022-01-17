@@ -6,7 +6,7 @@ from ._types import Job
 from ._backend import make_job
 
 
-__version__ = "0.2.12"
+__version__ = "0.2.14"
 
 __all__ = [
     "__version__",
