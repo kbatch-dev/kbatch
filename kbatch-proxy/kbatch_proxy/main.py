@@ -1,5 +1,4 @@
 import os
-import functools
 import logging
 from typing import List, Optional, Tuple, Dict
 
@@ -147,7 +146,6 @@ async def get_current_user(request: Request) -> User:
 # Kubernetes backend configuration
 
 
-@functools.lru_cache
 def get_k8s_api() -> Tuple[kubernetes.client.CoreV1Api, kubernetes.client.BatchV1Api]:
     kubernetes.config.load_config()
 
