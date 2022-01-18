@@ -108,10 +108,10 @@ def list_jobs(kbatch_url, token):
     return r.json()
 
 
-def logs(job_name, kbatch_url, token):
+def list_pods(kbatch_url: str, token: Optional[str], job_name: Optional[str] = None):
+    client = httpx.Client(follow_redirects=True)
     config = load_config()
 
-    client = httpx.Client(follow_redirects=True)
     token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
     kbatch_url = handle_url(kbatch_url, config)
 
@@ -120,11 +120,57 @@ def logs(job_name, kbatch_url, token):
     }
 
     r = client.get(
-        urllib.parse.urljoin(kbatch_url, f"jobs/logs/{job_name}/"), headers=headers
+        urllib.parse.urljoin(kbatch_url, "pods/"),
+        headers=headers,
+        params=dict(job_name=job_name),
     )
     r.raise_for_status()
 
-    return r.text
+    return r.json()
+
+
+def logs(pod_name, kbatch_url, token, read_timeout: int = 60):
+    gen = _logs(pod_name, kbatch_url, token, stream=False, read_timeout=read_timeout)
+    result = next(gen)
+    return result
+
+
+def logs_streaming(pod_name, kbatch_url, token, read_timeout: int = 60):
+    return _logs(pod_name, kbatch_url, token, stream=True, read_timeout=read_timeout)
+
+
+def _logs(
+    pod_name, kbatch_url, token, stream: Optional[bool] = False, read_timeout: int = 60
+):
+    config = load_config()
+    client = httpx.Client(
+        follow_redirects=True, timeout=httpx.Timeout(5, read=read_timeout)
+    )
+    token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
+    kbatch_url = handle_url(kbatch_url, config)
+
+    headers = {
+        "Authorization": f"token {token}",
+    }
+
+    if stream:
+        with client.stream(
+            "GET",
+            urllib.parse.urljoin(kbatch_url, f"jobs/logs/{pod_name}/"),
+            headers=headers,
+            params=dict(stream=stream),
+        ) as r:
+            for data in r.iter_text():
+                yield data
+
+    else:
+        r = client.get(
+            urllib.parse.urljoin(kbatch_url, f"jobs/logs/{pod_name}/"),
+            headers=headers,
+        )
+        r.raise_for_status()
+
+        yield r.text
 
 
 def submit_job(
@@ -178,6 +224,10 @@ def status(row):
         raise ValueError
 
 
+def pod_status(row):
+    return row["status"]["phase"]
+
+
 def duration(row):
     start_time = datetime.datetime.fromisoformat(row["status"]["start_time"])
     end_time: Optional[datetime.timedelta] = None
@@ -212,6 +262,25 @@ def format_jobs(data):
             row["metadata"]["creation_timestamp"],
             status(row),
             duration(row),
+        )
+
+    return table
+
+
+def format_pods(data):
+    table = rich.table.Table(title="Pods")
+
+    table.add_column("pod name", style="bold", no_wrap=True)
+    table.add_column("submitted")
+    table.add_column("status")
+    # table.add_column("duration")
+
+    for row in data["items"]:
+        table.add_row(
+            row["metadata"]["name"],
+            row["metadata"]["creation_timestamp"],
+            pod_status(row),
+            # duration(row),
         )
 
     return table

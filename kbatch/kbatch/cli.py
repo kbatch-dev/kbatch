@@ -37,7 +37,7 @@ def show(job_name, kbatch_url, token):
     rich.print_json(data=result)
 
 
-@job.command()
+@job.command(name="list")
 @click.option("--kbatch-url", help="URL to the kbatch server.")
 @click.option("--token", help="File to execute.")
 @click.option(
@@ -47,7 +47,7 @@ def show(job_name, kbatch_url, token):
     type=click.Choice(["json", "table"]),
     default="json",
 )
-def list(kbatch_url, token, output):
+def list_jobs(kbatch_url, token, output):
     result = _core.list_jobs(kbatch_url, token)
 
     if output == "json":
@@ -121,21 +121,6 @@ def submit(
     rich.print_json(data=result)
 
 
-@job.command()
-@click.argument("job_name")
-@click.option("--kbatch-url", help="URL to the kbatch server.")
-@click.option("--token", help="File to execute.")
-@click.option("--pretty/--no-pretty", default=True)
-def logs(job_name, kbatch_url, token, pretty):
-    result = _core.logs(job_name, kbatch_url, token)
-    if pretty:
-        import rich
-
-        rich.print(result)
-    else:
-        print(result)
-
-
 @cli.command()
 @click.option("--kbatch-url")
 def profiles(kbatch_url):
@@ -147,3 +132,63 @@ def profiles(kbatch_url):
     """
     p = _core.show_profiles(kbatch_url)
     rich.print_json(data=p)
+
+
+@cli.group()
+def pod():
+    pass
+
+
+@pod.command(name="list")
+@click.option("--kbatch-url", help="URL to the kbatch server.")
+@click.option("--token", help="File to execute.")
+@click.option(
+    "--job-name", help="The name of the job to limit the results to.", default=None
+)
+@click.option(
+    "-o",
+    "--output",
+    help="output format",
+    type=click.Choice(["json", "table"]),
+    default="json",
+)
+def list_pods(kbatch_url, token, job_name, output):
+    result = _core.list_pods(kbatch_url, token, job_name)
+
+    if output == "json":
+        rich.print_json(data=result)
+    elif output == "table":
+        rich.print(_core.format_pods(result))
+
+    # elif output == "table":
+    #     rich.print(_core.format_jobs(result))
+
+
+# TODO show pod
+
+
+@pod.command()
+@click.argument("job_name")
+@click.option("--kbatch-url", help="URL to the kbatch server.")
+@click.option("--token", help="File to execute.")
+@click.option("--stream/--no-stream", help="Whether to stream the logs", default=False)
+@click.option("--read-timeout", help="Timeout for reading data", default=60, type=int)
+@click.option("--pretty/--no-pretty", default=True)
+def logs(job_name, kbatch_url, token, stream, pretty, read_timeout):
+    if pretty:
+        import rich
+
+        print = rich.print
+
+    if stream:
+        result = _core.logs_streaming(
+            job_name, kbatch_url, token, read_timeout=read_timeout
+        )
+    else:
+        result = _core.logs(job_name, kbatch_url, token, read_timeout=read_timeout)
+
+    if stream:
+        for line in result:
+            print(line)
+    else:
+        print(result)

@@ -11,7 +11,7 @@ import kubernetes.client.models
 import kubernetes.config
 import kubernetes.watch
 import rich.traceback
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import StreamingResponse, Response
 
 from . import patch
 from . import utils
@@ -165,7 +165,7 @@ async def read_job(job_name: str, user: User = Depends(get_current_user)):
 
 @router.get("/jobs/")
 async def read_jobs(user: User = Depends(get_current_user)):
-    _, batch_api = get_k8s_api()
+    api, batch_api = get_k8s_api()
     result = batch_api.list_namespaced_job(user.namespace)
     return result.to_dict()
 
@@ -218,6 +218,11 @@ async def create_job(request: Request, user: User = Depends(get_current_user)):
     #   - ..
     # 2. Submit Job
     # 3. Patch ConfigMap to add Job as the owner
+    if settings.kbatch_create_user_namespace:
+        logger.info("Ensuring namespace %s", user.namespace)
+        created = ensure_namespace(api, user.namespace)
+        if created:
+            logger.info("Created namespace %s", user.namespace)
 
     if config_map:
         logger.info("Submitting ConfigMap")
@@ -225,12 +230,6 @@ async def create_job(request: Request, user: User = Depends(get_current_user)):
             namespace=user.namespace, body=config_map
         )
         patch.add_submitted_configmap_name(job, config_map)
-
-    if settings.kbatch_create_user_namespace:
-        logger.info("Ensuring namespace %s", user.namespace)
-        created = ensure_namespace(api, user.namespace)
-        if created:
-            logger.info("Created namespace %s", user.namespace)
 
     logger.info("Submitting job")
     resp = batch_api.create_namespaced_job(namespace=user.namespace, body=job)
@@ -250,18 +249,46 @@ async def create_job(request: Request, user: User = Depends(get_current_user)):
     return resp.to_dict()
 
 
-@router.get("/jobs/logs/{job_name}/", response_class=PlainTextResponse)
-async def logs(job_name: str, user: User = Depends(get_current_user)):
-    api, _ = get_k8s_api()
-    logs = api.read_namespaced_pod_log(name=job_name, namespace=user.namespace)
+@router.get("/pods/{pod_name}")
+async def read_pod(pod_name: str, user: User = Depends(get_current_user)):
+    core_api, _ = get_k8s_api()
+    result = core_api.read_namespaced_pod(pod_name, namespace=user.namespace)
+    return result.to_dict()
 
-    return logs
 
-    # watch = kubernetes.watch.Watch()
-    # for event in watch.stream(api.read_namespaced_pod_log, name=job_name,
-    #                           namespace=user.namespace):
-    #     # TODO: SSE
-    #     print(event)
+@router.get("/pods/")
+async def read_pods(
+    user: User = Depends(get_current_user), job_name: Optional[str] = None
+):
+    core_api, _ = get_k8s_api()
+    kwargs = {}
+
+    if job_name:
+        kwargs["label_selector"] = f"job-name={job_name}"
+    result = core_api.list_namespaced_pod(user.namespace, **kwargs)
+    return result.to_dict()
+
+
+@router.get("/jobs/logs/{pod_name}/", response_class=Response)
+async def logs(
+    pod_name: str,
+    user: User = Depends(get_current_user),
+    stream: Optional[bool] = False,
+):
+    core_api, _ = get_k8s_api()
+    if stream:
+        w = kubernetes.watch.Watch()
+        source = iter(
+            w.stream(
+                core_api.read_namespaced_pod_log,
+                name=pod_name,
+                namespace=user.namespace,
+            )
+        )
+        return StreamingResponse(source)
+    else:
+        logs = core_api.read_namespaced_pod_log(name=pod_name, namespace=user.namespace)
+        return logs
 
 
 @router.get("/profiles/")
