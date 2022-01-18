@@ -108,7 +108,7 @@ def list_jobs(kbatch_url, token):
     return r.json()
 
 
-def list_pods(kbatch_url: str, token: str, job_name: Optional[str] = None):
+def list_pods(kbatch_url: str, token: Optional[str], job_name: Optional[str] = None):
     client = httpx.Client(follow_redirects=True)
     config = load_config()
 

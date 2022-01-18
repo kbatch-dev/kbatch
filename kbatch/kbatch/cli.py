@@ -37,7 +37,7 @@ def show(job_name, kbatch_url, token):
     rich.print_json(data=result)
 
 
-@job.command()
+@job.command(name="list")
 @click.option("--kbatch-url", help="URL to the kbatch server.")
 @click.option("--token", help="File to execute.")
 @click.option(
@@ -47,7 +47,7 @@ def show(job_name, kbatch_url, token):
     type=click.Choice(["json", "table"]),
     default="json",
 )
-def list(kbatch_url, token, output):
+def list_jobs(kbatch_url, token, output):
     result = _core.list_jobs(kbatch_url, token)
 
     if output == "json":
@@ -139,7 +139,7 @@ def pod():
     pass
 
 
-@pod.command()
+@pod.command(name="list")
 @click.option("--kbatch-url", help="URL to the kbatch server.")
 @click.option("--token", help="File to execute.")
 @click.option(
@@ -152,7 +152,7 @@ def pod():
     type=click.Choice(["json", "table"]),
     default="json",
 )
-def list(kbatch_url, token, job_name, output):  # noqa: F811
+def list_pods(kbatch_url, token, job_name, output):
     result = _core.list_pods(kbatch_url, token, job_name)
 
     if output == "json":
