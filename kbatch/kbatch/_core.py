@@ -129,7 +129,17 @@ def list_pods(kbatch_url: str, token: str, job_name: Optional[str] = None):
     return r.json()
 
 
-def logs(
+def logs(job_name, kbatch_url, token, read_timeout: int = 60):
+    gen = _logs(job_name, kbatch_url, token, stream=False, read_timeout=read_timeout)
+    result = next(gen)
+    return result
+
+
+def logs_streaming(job_name, kbatch_url, token, read_timeout: int = 60):
+    return _logs(job_name, kbatch_url, token, stream=True, read_timeout=read_timeout)
+
+
+def _logs(
     job_name, kbatch_url, token, stream: Optional[bool] = False, read_timeout: int = 60
 ):
     config = load_config()
@@ -160,7 +170,7 @@ def logs(
         )
         r.raise_for_status()
 
-        return r.text
+        yield r.text
 
 
 def submit_job(

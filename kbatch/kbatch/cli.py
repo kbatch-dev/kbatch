@@ -179,13 +179,15 @@ def logs(job_name, kbatch_url, token, stream, pretty, read_timeout):
 
         print = rich.print
 
-    result = _core.logs(
-        job_name, kbatch_url, token, stream=stream, read_timeout=read_timeout
-    )
+    if stream:
+        result = _core.logs_streaming(
+            job_name, kbatch_url, token, read_timeout=read_timeout
+        )
+    else:
+        result = _core.logs(job_name, kbatch_url, token, read_timeout=read_timeout)
+
     if stream:
         for line in result:
             print(line)
     else:
-        # the function has a yield, so it's a generator. We should maybe clean that up!
-        result = next(result)
         print(result)
