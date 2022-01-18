@@ -91,3 +91,39 @@ app:
       }
 
 ```
+
+## Development setup
+
+We don't have a fully working docker-ized setup, since we (i.e. Tom) don't know how to do Kubernetes within docker. So the current setup relies on
+
+1. k3d for Kubernetes
+2. JupyterHub as a regular Python process
+3. kbatch-proxy as a regular Python process
+
+### Create a cluster
+
+```
+$ k3d cluster create ksubmit
+```
+
+### Create a Hub
+
+make sure to `npm install` configurable-http-proxy.
+
+```
+$ cd hub
+$ jupyterhub
+```
+
+### Start kbatch-proxy
+
+```
+KBATCH_PREFIX=/services/kbatch \
+  KBATCH_PROFILE_FILE=tests/profile_template.yaml \
+  JUPYTERHUB_API_TOKEN=super-secret \
+  JUPYTERHUB_API_URL=http://127.0.0.1:8000/hub/api \
+  JUPYTERHUB_HOST=http://127.0.0.1:8000 \
+  uvicorn kbatch_proxy.main:app --reload --port=8050
+```
+
+You'll might want to log in and create a token at http://localhost:8000/hub/token. The `kbatch configure` with that token.

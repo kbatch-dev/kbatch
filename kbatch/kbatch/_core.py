@@ -108,10 +108,10 @@ def list_jobs(kbatch_url, token):
     return r.json()
 
 
-def logs(job_name, kbatch_url, token):
+def list_pods(kbatch_url: str, token: str, job_name: Optional[str] = None):
+    client = httpx.Client(follow_redirects=True)
     config = load_config()
 
-    client = httpx.Client(follow_redirects=True)
     token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
     kbatch_url = handle_url(kbatch_url, config)
 
@@ -120,11 +120,47 @@ def logs(job_name, kbatch_url, token):
     }
 
     r = client.get(
-        urllib.parse.urljoin(kbatch_url, f"jobs/logs/{job_name}/"), headers=headers
+        urllib.parse.urljoin(kbatch_url, "pods/"),
+        headers=headers,
+        params=dict(job_name=job_name),
     )
     r.raise_for_status()
 
-    return r.text
+    return r.json()
+
+
+def logs(
+    job_name, kbatch_url, token, stream: Optional[bool] = False, read_timeout: int = 60
+):
+    config = load_config()
+    client = httpx.Client(
+        follow_redirects=True, timeout=httpx.Timeout(5, read=read_timeout)
+    )
+    token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
+    kbatch_url = handle_url(kbatch_url, config)
+
+    headers = {
+        "Authorization": f"token {token}",
+    }
+
+    if stream:
+        with client.stream(
+            "GET",
+            urllib.parse.urljoin(kbatch_url, f"jobs/logs/{job_name}/"),
+            headers=headers,
+            params=dict(stream=stream),
+        ) as r:
+            for data in r.iter_text():
+                yield data
+
+    else:
+        r = client.get(
+            urllib.parse.urljoin(kbatch_url, f"jobs/logs/{job_name}/"),
+            headers=headers,
+        )
+        r.raise_for_status()
+
+        return r.text
 
 
 def submit_job(
