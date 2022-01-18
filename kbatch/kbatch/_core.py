@@ -129,18 +129,18 @@ def list_pods(kbatch_url: str, token: str, job_name: Optional[str] = None):
     return r.json()
 
 
-def logs(job_name, kbatch_url, token, read_timeout: int = 60):
-    gen = _logs(job_name, kbatch_url, token, stream=False, read_timeout=read_timeout)
+def logs(pod_name, kbatch_url, token, read_timeout: int = 60):
+    gen = _logs(pod_name, kbatch_url, token, stream=False, read_timeout=read_timeout)
     result = next(gen)
     return result
 
 
-def logs_streaming(job_name, kbatch_url, token, read_timeout: int = 60):
-    return _logs(job_name, kbatch_url, token, stream=True, read_timeout=read_timeout)
+def logs_streaming(pod_name, kbatch_url, token, read_timeout: int = 60):
+    return _logs(pod_name, kbatch_url, token, stream=True, read_timeout=read_timeout)
 
 
 def _logs(
-    job_name, kbatch_url, token, stream: Optional[bool] = False, read_timeout: int = 60
+    pod_name, kbatch_url, token, stream: Optional[bool] = False, read_timeout: int = 60
 ):
     config = load_config()
     client = httpx.Client(
@@ -156,7 +156,7 @@ def _logs(
     if stream:
         with client.stream(
             "GET",
-            urllib.parse.urljoin(kbatch_url, f"jobs/logs/{job_name}/"),
+            urllib.parse.urljoin(kbatch_url, f"jobs/logs/{pod_name}/"),
             headers=headers,
             params=dict(stream=stream),
         ) as r:
@@ -165,7 +165,7 @@ def _logs(
 
     else:
         r = client.get(
-            urllib.parse.urljoin(kbatch_url, f"jobs/logs/{job_name}/"),
+            urllib.parse.urljoin(kbatch_url, f"jobs/logs/{pod_name}/"),
             headers=headers,
         )
         r.raise_for_status()
@@ -224,6 +224,10 @@ def status(row):
         raise ValueError
 
 
+def pod_status(row):
+    return row["status"]["phase"]
+
+
 def duration(row):
     start_time = datetime.datetime.fromisoformat(row["status"]["start_time"])
     end_time: Optional[datetime.timedelta] = None
@@ -258,6 +262,25 @@ def format_jobs(data):
             row["metadata"]["creation_timestamp"],
             status(row),
             duration(row),
+        )
+
+    return table
+
+
+def format_pods(data):
+    table = rich.table.Table(title="Pods")
+
+    table.add_column("pod name", style="bold", no_wrap=True)
+    table.add_column("submitted")
+    table.add_column("status")
+    # table.add_column("duration")
+
+    for row in data["items"]:
+        table.add_row(
+            row["metadata"]["name"],
+            row["metadata"]["creation_timestamp"],
+            pod_status(row),
+            # duration(row),
         )
 
     return table

@@ -148,6 +148,16 @@ def test_list_jobs(respx_mock: respx.MockRouter):
     assert result == data
 
 
+def test_list_pods(respx_mock: respx.MockRouter):
+    data = json.loads(HERE.joinpath("data", "list_pods.json").read_text())
+    respx_mock.get("http://kbatch.com/pods/").mock(
+        return_value=httpx.Response(200, json=data)
+    )
+
+    result = kbatch.list_pods("http://kbatch.com/", token="abc")
+    assert result == data
+
+
 def test_logs(respx_mock: respx.MockRouter):
     data = HERE.joinpath("data", "list_jobs.json").read_text()
     respx_mock.get("http://kbatch.com/jobs/logs/mypod/").mock(
@@ -155,6 +165,20 @@ def test_logs(respx_mock: respx.MockRouter):
     )
 
     result = kbatch.logs("mypod", "http://kbatch.com/", token="abc")
+    assert result == data
+
+
+def test_logs_streaming(respx_mock: respx.MockRouter):
+    data = HERE.joinpath("data", "list_jobs.json").read_text()
+    respx_mock.get("http://kbatch.com/jobs/logs/mypod/").mock(
+        return_value=httpx.Response(200, text=data)
+    )
+
+    buffers = []
+    gen = kbatch.logs_streaming("mypod", "http://kbatch.com/", token="abc")
+    for batch in gen:
+        buffers.append(batch)
+    result = "".join(buffers)
     assert result == data
 
 

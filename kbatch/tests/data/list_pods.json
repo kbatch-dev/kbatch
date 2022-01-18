@@ -1,0 +1,670 @@
+{
+  "api_version": "v1",
+  "items": [
+    {
+      "api_version": null,
+      "kind": null,
+      "metadata": {
+        "annotations": {
+          "kbatch.jupyter.org/username": "tom"
+        },
+        "cluster_name": null,
+        "creation_timestamp": "2022-01-18T21:41:49+00:00",
+        "deletion_grace_period_seconds": null,
+        "deletion_timestamp": null,
+        "finalizers": null,
+        "generate_name": "streaming-logs-ws8w9-",
+        "generation": null,
+        "labels": {
+          "controller-uid": "5347bbb6-36ce-42a7-8040-f5b24d3ca9ff",
+          "job-name": "streaming-logs-ws8w9",
+          "kbatch.jupyter.org/username": "tom"
+        },
+        "managed_fields": [
+          {
+            "api_version": "v1",
+            "fields_type": "FieldsV1",
+            "fields_v1": {
+              "f:metadata": {
+                "f:annotations": {
+                  ".": {},
+                  "f:kbatch.jupyter.org/username": {}
+                },
+                "f:generateName": {},
+                "f:labels": {
+                  ".": {},
+                  "f:controller-uid": {},
+                  "f:job-name": {},
+                  "f:kbatch.jupyter.org/username": {}
+                },
+                "f:ownerReferences": {
+                  ".": {},
+                  "k:{\"uid\":\"5347bbb6-36ce-42a7-8040-f5b24d3ca9ff\"}": {
+                    ".": {},
+                    "f:apiVersion": {},
+                    "f:blockOwnerDeletion": {},
+                    "f:controller": {},
+                    "f:kind": {},
+                    "f:name": {},
+                    "f:uid": {}
+                  }
+                }
+              },
+              "f:spec": {
+                "f:containers": {
+                  "k:{\"name\":\"job\"}": {
+                    ".": {},
+                    "f:command": {},
+                    "f:env": {
+                      ".": {},
+                      "k:{\"name\":\"JUPYTERHUB_API_TOKEN\"}": {
+                        ".": {},
+                        "f:name": {},
+                        "f:value": {}
+                      },
+                      "k:{\"name\":\"JUPYTER_IMAGE\"}": {
+                        ".": {},
+                        "f:name": {},
+                        "f:value": {}
+                      },
+                      "k:{\"name\":\"JUPYTER_IMAGE_SPEC\"}": {
+                        ".": {},
+                        "f:name": {},
+                        "f:value": {}
+                      }
+                    },
+                    "f:image": {},
+                    "f:imagePullPolicy": {},
+                    "f:name": {},
+                    "f:resources": {},
+                    "f:terminationMessagePath": {},
+                    "f:terminationMessagePolicy": {},
+                    "f:volumeMounts": {
+                      ".": {},
+                      "k:{\"mountPath\":\"/code\"}": {
+                        ".": {},
+                        "f:mountPath": {},
+                        "f:name": {}
+                      }
+                    },
+                    "f:workingDir": {}
+                  }
+                },
+                "f:dnsPolicy": {},
+                "f:enableServiceLinks": {},
+                "f:initContainers": {
+                  ".": {},
+                  "k:{\"name\":\"streaming-logs--init\"}": {
+                    ".": {},
+                    "f:args": {},
+                    "f:command": {},
+                    "f:image": {},
+                    "f:imagePullPolicy": {},
+                    "f:name": {},
+                    "f:resources": {},
+                    "f:terminationMessagePath": {},
+                    "f:terminationMessagePolicy": {},
+                    "f:volumeMounts": {
+                      ".": {},
+                      "k:{\"mountPath\":\"/code\"}": {
+                        ".": {},
+                        "f:mountPath": {},
+                        "f:name": {}
+                      },
+                      "k:{\"mountPath\":\"/code-zipped\"}": {
+                        ".": {},
+                        "f:mountPath": {},
+                        "f:name": {}
+                      }
+                    }
+                  }
+                },
+                "f:restartPolicy": {},
+                "f:schedulerName": {},
+                "f:securityContext": {},
+                "f:terminationGracePeriodSeconds": {},
+                "f:volumes": {
+                  ".": {},
+                  "k:{\"name\":\"code-source-volume\"}": {
+                    ".": {},
+                    "f:configMap": {
+                      ".": {},
+                      "f:defaultMode": {},
+                      "f:items": {},
+                      "f:name": {},
+                      "f:optional": {}
+                    },
+                    "f:name": {}
+                  },
+                  "k:{\"name\":\"code-volume\"}": {
+                    ".": {},
+                    "f:emptyDir": {},
+                    "f:name": {}
+                  }
+                }
+              },
+              "f:status": {
+                "f:conditions": {
+                  "k:{\"type\":\"ContainersReady\"}": {
+                    ".": {},
+                    "f:lastProbeTime": {},
+                    "f:lastTransitionTime": {},
+                    "f:reason": {},
+                    "f:status": {},
+                    "f:type": {}
+                  },
+                  "k:{\"type\":\"Initialized\"}": {
+                    ".": {},
+                    "f:lastProbeTime": {},
+                    "f:lastTransitionTime": {},
+                    "f:reason": {},
+                    "f:status": {},
+                    "f:type": {}
+                  },
+                  "k:{\"type\":\"Ready\"}": {
+                    ".": {},
+                    "f:lastProbeTime": {},
+                    "f:lastTransitionTime": {},
+                    "f:reason": {},
+                    "f:status": {},
+                    "f:type": {}
+                  }
+                },
+                "f:containerStatuses": {},
+                "f:hostIP": {},
+                "f:initContainerStatuses": {},
+                "f:phase": {},
+                "f:podIP": {},
+                "f:podIPs": {
+                  ".": {},
+                  "k:{\"ip\":\"10.42.0.59\"}": {
+                    ".": {},
+                    "f:ip": {}
+                  }
+                },
+                "f:startTime": {}
+              }
+            },
+            "manager": "k3s",
+            "operation": "Update",
+            "time": "2022-01-18T21:54:09+00:00"
+          }
+        ],
+        "name": "streaming-logs-ws8w9-82696",
+        "namespace": "tom",
+        "owner_references": [
+          {
+            "api_version": "batch/v1",
+            "block_owner_deletion": true,
+            "controller": true,
+            "kind": "Job",
+            "name": "streaming-logs-ws8w9",
+            "uid": "5347bbb6-36ce-42a7-8040-f5b24d3ca9ff"
+          }
+        ],
+        "resource_version": "1865535",
+        "self_link": null,
+        "uid": "17de0493-b9d8-4310-b553-d949ef6a3b0a"
+      },
+      "spec": {
+        "active_deadline_seconds": null,
+        "affinity": null,
+        "automount_service_account_token": null,
+        "containers": [
+          {
+            "args": null,
+            "command": [
+              "sh",
+              "script.sh"
+            ],
+            "env": [
+              {
+                "name": "JUPYTER_IMAGE",
+                "value": "python:slim",
+                "value_from": null
+              },
+              {
+                "name": "JUPYTER_IMAGE_SPEC",
+                "value": "python:slim",
+                "value_from": null
+              },
+              {
+                "name": "JUPYTERHUB_API_TOKEN",
+                "value": "41b8f7082efe496c919204a223e0fd64",
+                "value_from": null
+              }
+            ],
+            "env_from": null,
+            "image": "python:slim",
+            "image_pull_policy": "IfNotPresent",
+            "lifecycle": null,
+            "liveness_probe": null,
+            "name": "job",
+            "ports": null,
+            "readiness_probe": null,
+            "resources": {
+              "limits": null,
+              "requests": null
+            },
+            "security_context": null,
+            "startup_probe": null,
+            "stdin": null,
+            "stdin_once": null,
+            "termination_message_path": "/dev/termination-log",
+            "termination_message_policy": "File",
+            "tty": null,
+            "volume_devices": null,
+            "volume_mounts": [
+              {
+                "mount_path": "/code",
+                "mount_propagation": null,
+                "name": "code-volume",
+                "read_only": null,
+                "sub_path": null,
+                "sub_path_expr": null
+              },
+              {
+                "mount_path": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "mount_propagation": null,
+                "name": "kube-api-access-spk4c",
+                "read_only": true,
+                "sub_path": null,
+                "sub_path_expr": null
+              }
+            ],
+            "working_dir": "/code"
+          }
+        ],
+        "dns_config": null,
+        "dns_policy": "ClusterFirst",
+        "enable_service_links": true,
+        "ephemeral_containers": null,
+        "host_aliases": null,
+        "host_ipc": null,
+        "host_network": null,
+        "host_pid": null,
+        "hostname": null,
+        "image_pull_secrets": null,
+        "init_containers": [
+          {
+            "args": [
+              "-c",
+              "echo [unzip]; unzip -d /code/ /code-zipped/code.b64 ;echo [ls code] ; ls /code ;"
+            ],
+            "command": [
+              "/bin/sh"
+            ],
+            "env": null,
+            "env_from": null,
+            "image": "busybox",
+            "image_pull_policy": "Always",
+            "lifecycle": null,
+            "liveness_probe": null,
+            "name": "streaming-logs--init",
+            "ports": null,
+            "readiness_probe": null,
+            "resources": {
+              "limits": null,
+              "requests": null
+            },
+            "security_context": null,
+            "startup_probe": null,
+            "stdin": null,
+            "stdin_once": null,
+            "termination_message_path": "/dev/termination-log",
+            "termination_message_policy": "File",
+            "tty": null,
+            "volume_devices": null,
+            "volume_mounts": [
+              {
+                "mount_path": "/code-zipped",
+                "mount_propagation": null,
+                "name": "code-source-volume",
+                "read_only": null,
+                "sub_path": null,
+                "sub_path_expr": null
+              },
+              {
+                "mount_path": "/code",
+                "mount_propagation": null,
+                "name": "code-volume",
+                "read_only": null,
+                "sub_path": null,
+                "sub_path_expr": null
+              },
+              {
+                "mount_path": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "mount_propagation": null,
+                "name": "kube-api-access-spk4c",
+                "read_only": true,
+                "sub_path": null,
+                "sub_path_expr": null
+              }
+            ],
+            "working_dir": null
+          }
+        ],
+        "node_name": "k3d-ksubmit-server-0",
+        "node_selector": null,
+        "overhead": null,
+        "preemption_policy": "PreemptLowerPriority",
+        "priority": 0,
+        "priority_class_name": null,
+        "readiness_gates": null,
+        "restart_policy": "Never",
+        "runtime_class_name": null,
+        "scheduler_name": "default-scheduler",
+        "security_context": {
+          "fs_group": null,
+          "fs_group_change_policy": null,
+          "run_as_group": null,
+          "run_as_non_root": null,
+          "run_as_user": null,
+          "se_linux_options": null,
+          "seccomp_profile": null,
+          "supplemental_groups": null,
+          "sysctls": null,
+          "windows_options": null
+        },
+        "service_account": "default",
+        "service_account_name": "default",
+        "set_hostname_as_fqdn": null,
+        "share_process_namespace": null,
+        "subdomain": null,
+        "termination_grace_period_seconds": 30,
+        "tolerations": [
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/not-ready",
+            "operator": "Exists",
+            "toleration_seconds": 300,
+            "value": null
+          },
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/unreachable",
+            "operator": "Exists",
+            "toleration_seconds": 300,
+            "value": null
+          }
+        ],
+        "topology_spread_constraints": null,
+        "volumes": [
+          {
+            "aws_elastic_block_store": null,
+            "azure_disk": null,
+            "azure_file": null,
+            "cephfs": null,
+            "cinder": null,
+            "config_map": {
+              "default_mode": 420,
+              "items": [
+                {
+                  "key": "code",
+                  "mode": null,
+                  "path": "code.b64"
+                }
+              ],
+              "name": "streaming-logsc59db",
+              "optional": false
+            },
+            "csi": null,
+            "downward_api": null,
+            "empty_dir": null,
+            "ephemeral": null,
+            "fc": null,
+            "flex_volume": null,
+            "flocker": null,
+            "gce_persistent_disk": null,
+            "git_repo": null,
+            "glusterfs": null,
+            "host_path": null,
+            "iscsi": null,
+            "name": "code-source-volume",
+            "nfs": null,
+            "persistent_volume_claim": null,
+            "photon_persistent_disk": null,
+            "portworx_volume": null,
+            "projected": null,
+            "quobyte": null,
+            "rbd": null,
+            "scale_io": null,
+            "secret": null,
+            "storageos": null,
+            "vsphere_volume": null
+          },
+          {
+            "aws_elastic_block_store": null,
+            "azure_disk": null,
+            "azure_file": null,
+            "cephfs": null,
+            "cinder": null,
+            "config_map": null,
+            "csi": null,
+            "downward_api": null,
+            "empty_dir": {
+              "medium": null,
+              "size_limit": null
+            },
+            "ephemeral": null,
+            "fc": null,
+            "flex_volume": null,
+            "flocker": null,
+            "gce_persistent_disk": null,
+            "git_repo": null,
+            "glusterfs": null,
+            "host_path": null,
+            "iscsi": null,
+            "name": "code-volume",
+            "nfs": null,
+            "persistent_volume_claim": null,
+            "photon_persistent_disk": null,
+            "portworx_volume": null,
+            "projected": null,
+            "quobyte": null,
+            "rbd": null,
+            "scale_io": null,
+            "secret": null,
+            "storageos": null,
+            "vsphere_volume": null
+          },
+          {
+            "aws_elastic_block_store": null,
+            "azure_disk": null,
+            "azure_file": null,
+            "cephfs": null,
+            "cinder": null,
+            "config_map": null,
+            "csi": null,
+            "downward_api": null,
+            "empty_dir": null,
+            "ephemeral": null,
+            "fc": null,
+            "flex_volume": null,
+            "flocker": null,
+            "gce_persistent_disk": null,
+            "git_repo": null,
+            "glusterfs": null,
+            "host_path": null,
+            "iscsi": null,
+            "name": "kube-api-access-spk4c",
+            "nfs": null,
+            "persistent_volume_claim": null,
+            "photon_persistent_disk": null,
+            "portworx_volume": null,
+            "projected": {
+              "default_mode": 420,
+              "sources": [
+                {
+                  "config_map": null,
+                  "downward_api": null,
+                  "secret": null,
+                  "service_account_token": {
+                    "audience": null,
+                    "expiration_seconds": 3607,
+                    "path": "token"
+                  }
+                },
+                {
+                  "config_map": {
+                    "items": [
+                      {
+                        "key": "ca.crt",
+                        "mode": null,
+                        "path": "ca.crt"
+                      }
+                    ],
+                    "name": "kube-root-ca.crt",
+                    "optional": null
+                  },
+                  "downward_api": null,
+                  "secret": null,
+                  "service_account_token": null
+                },
+                {
+                  "config_map": null,
+                  "downward_api": {
+                    "items": [
+                      {
+                        "field_ref": {
+                          "api_version": "v1",
+                          "field_path": "metadata.namespace"
+                        },
+                        "mode": null,
+                        "path": "namespace",
+                        "resource_field_ref": null
+                      }
+                    ]
+                  },
+                  "secret": null,
+                  "service_account_token": null
+                }
+              ]
+            },
+            "quobyte": null,
+            "rbd": null,
+            "scale_io": null,
+            "secret": null,
+            "storageos": null,
+            "vsphere_volume": null
+          }
+        ]
+      },
+      "status": {
+        "conditions": [
+          {
+            "last_probe_time": null,
+            "last_transition_time": "2022-01-18T21:41:54+00:00",
+            "message": null,
+            "reason": "PodCompleted",
+            "status": "True",
+            "type": "Initialized"
+          },
+          {
+            "last_probe_time": null,
+            "last_transition_time": "2022-01-18T21:54:09+00:00",
+            "message": null,
+            "reason": "PodCompleted",
+            "status": "False",
+            "type": "Ready"
+          },
+          {
+            "last_probe_time": null,
+            "last_transition_time": "2022-01-18T21:54:09+00:00",
+            "message": null,
+            "reason": "PodCompleted",
+            "status": "False",
+            "type": "ContainersReady"
+          },
+          {
+            "last_probe_time": null,
+            "last_transition_time": "2022-01-18T21:41:49+00:00",
+            "message": null,
+            "reason": null,
+            "status": "True",
+            "type": "PodScheduled"
+          }
+        ],
+        "container_statuses": [
+          {
+            "container_id": "containerd://bc288e7f0b8f7b8ad746e7cdf3d0af1b2979b254eb837f1acf1525da9e0aa9af",
+            "image": "docker.io/library/python:slim",
+            "image_id": "docker.io/library/python@sha256:917519055b765bfd7b3bf945f070329f3253d64a520b6d82089e8e40beb3c511",
+            "last_state": {
+              "running": null,
+              "terminated": null,
+              "waiting": null
+            },
+            "name": "job",
+            "ready": false,
+            "restart_count": 0,
+            "started": false,
+            "state": {
+              "running": null,
+              "terminated": {
+                "container_id": "containerd://bc288e7f0b8f7b8ad746e7cdf3d0af1b2979b254eb837f1acf1525da9e0aa9af",
+                "exit_code": 0,
+                "finished_at": "2022-01-18T21:54:08+00:00",
+                "message": null,
+                "reason": "Completed",
+                "signal": null,
+                "started_at": "2022-01-18T21:42:02+00:00"
+              },
+              "waiting": null
+            }
+          }
+        ],
+        "ephemeral_container_statuses": null,
+        "host_ip": "172.28.0.2",
+        "init_container_statuses": [
+          {
+            "container_id": "containerd://f6aaf2d94be2637f2e6ff7214bbdbd6ee1863edc0d11d81be31a09a8449cfdd9",
+            "image": "docker.io/library/busybox:latest",
+            "image_id": "docker.io/library/busybox@sha256:5acba83a746c7608ed544dc1533b87c737a0b0fb730301639a0179f9344b1678",
+            "last_state": {
+              "running": null,
+              "terminated": null,
+              "waiting": null
+            },
+            "name": "streaming-logs--init",
+            "ready": true,
+            "restart_count": 0,
+            "started": null,
+            "state": {
+              "running": null,
+              "terminated": {
+                "container_id": "containerd://f6aaf2d94be2637f2e6ff7214bbdbd6ee1863edc0d11d81be31a09a8449cfdd9",
+                "exit_code": 0,
+                "finished_at": "2022-01-18T21:41:54+00:00",
+                "message": null,
+                "reason": "Completed",
+                "signal": null,
+                "started_at": "2022-01-18T21:41:54+00:00"
+              },
+              "waiting": null
+            }
+          }
+        ],
+        "message": null,
+        "nominated_node_name": null,
+        "phase": "Succeeded",
+        "pod_ip": "10.42.0.59",
+        "pod_i_ps": [
+          {
+            "ip": "10.42.0.59"
+          }
+        ],
+        "qos_class": "BestEffort",
+        "reason": null,
+        "start_time": "2022-01-18T21:41:49+00:00"
+      }
+    }
+  ],
+  "kind": "PodList",
+  "metadata": {
+    "_continue": null,
+    "remaining_item_count": null,
+    "resource_version": "1866489",
+    "self_link": null
+  }
+}

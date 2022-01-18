@@ -157,8 +157,9 @@ def list(kbatch_url, token, job_name, output):  # noqa: F811
 
     if output == "json":
         rich.print_json(data=result)
-    else:
-        raise NotImplementedError()
+    elif output == "table":
+        rich.print(_core.format_pods(result))
+
     # elif output == "table":
     #     rich.print(_core.format_jobs(result))
 
