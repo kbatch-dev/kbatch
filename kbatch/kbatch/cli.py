@@ -72,8 +72,26 @@ def list_jobs(kbatch_url, token, output):
 @click.option("-f", "--file", help="Configuration file.")
 @click.option("--kbatch-url", help="URL to the kbatch server.")
 @click.option("--token", help="JupyterHub API token.")
+@click.option(
+    "-o",
+    "--output",
+    default="json",
+    help="Output format.",
+    type=click.Choice(["json", "name"]),
+)
 def submit(
-    file, code, name, description, image, command, args, profile, kbatch_url, token, env
+    file,
+    code,
+    name,
+    description,
+    image,
+    command,
+    args,
+    profile,
+    kbatch_url,
+    token,
+    env,
+    output,
 ):
     """
     Submit a job to run on Kubernetes.
@@ -118,7 +136,10 @@ def submit(
         token=token,
         profile=profile,
     )
-    rich.print_json(data=result)
+    if output == "json":
+        rich.print_json(data=result)
+    elif output == "name":
+        print(result["metadata"]["name"])
 
 
 @cli.command()
@@ -149,7 +170,7 @@ def pod():
     "-o",
     "--output",
     help="output format",
-    type=click.Choice(["json", "table"]),
+    type=click.Choice(["json", "table", "name"]),
     default="json",
 )
 def list_pods(kbatch_url, token, job_name, output):
@@ -159,9 +180,9 @@ def list_pods(kbatch_url, token, job_name, output):
         rich.print_json(data=result)
     elif output == "table":
         rich.print(_core.format_pods(result))
-
-    # elif output == "table":
-    #     rich.print(_core.format_jobs(result))
+    elif output == "name":
+        names = [x["metadata"]["name"] for x in result["items"]]
+        rich.print("\n".join(names))
 
 
 # TODO show pod
@@ -176,8 +197,6 @@ def list_pods(kbatch_url, token, job_name, output):
 @click.option("--pretty/--no-pretty", default=True)
 def logs(job_name, kbatch_url, token, stream, pretty, read_timeout):
     if pretty:
-        import rich
-
         print = rich.print
 
     if stream:

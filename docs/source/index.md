@@ -3,7 +3,15 @@
 > A batch-style complement to interactive workflows on JupyterHub.
 
 `kbatch` lets you submit batch Jobs to Kubernetes. It's typically deployed as a JupyterHub service.
-You might use `kbatch` if you have some long-running workflow.
+You might use `kbatch` if you have some long-running workflow that you want to run on the same compute
+infrastructure as your JupyterHub.
+
+
+```{raw} html
+   <script id="asciicast-MuZYPm7ZK4Auf2yAlmdtoaOtZ" src="https://asciinema.org/a/MuZYPm7ZK4Auf2yAlmdtoaOtZ.js" async data-speed="3"></script>
+```
+
+*See the [examples gallery](examples/index.md) for more examples*
 
 `kbatch` has two components:
 
@@ -24,9 +32,10 @@ pip install kbatch
 
 Your Kubernetes / JupyterHub administrator might have deployed `kbatch` alongside your JupyterHub.
 If this is the case, you can configure `kbatch` default URL and JupyterHub API token to use for all
-of its operations..
+of its operations.
 
-You can generate API token logging in and visiting the token generation page, typically at `<JUPYTERHUB_URL>/hub/token`. Provide this token in place of `<JUPYTERHUB_TOKEN>` below.
+You can generate a JupyterHub API token by logging in and visiting the token generation page, typically at `<JUPYTERHUB_URL>/hub/token`.
+Provide this token in place of `<JUPYTERHUB_TOKEN>` below.
 
 Additionally, your JupyterHub admin might have deployed `kbatch` as a [JupyterHub service][jhub-service].
 If so, then you can submit jobs and make requests at the URL `<JUPYTERHUB_URL>/services/kbatch`. Use that in place of `<url-to-kbatch-server>` below.
