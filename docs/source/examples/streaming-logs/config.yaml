@@ -1,0 +1,7 @@
+# file: streaming-logs-config.yaml
+name: streaming-logs
+image: python:slim
+command:
+  - "sh"
+  - "script.sh"
+code: script.sh

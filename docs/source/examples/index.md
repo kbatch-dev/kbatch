@@ -7,6 +7,7 @@ to any JupyterHub deployed with `kbatch`, but Planetary Computer-specific aspect
 shell-script.md
 dask-gateway.md
 ndvi-blob-storage.md
+streaming-logs/streaming-logs.md
 ```
 
 [pc]: https://planetarycomputer.microsoft.com/
