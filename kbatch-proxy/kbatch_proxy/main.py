@@ -170,6 +170,13 @@ async def read_jobs(user: User = Depends(get_current_user)):
     return result.to_dict()
 
 
+@router.delete("/jobs/{job_name}")
+async def delete_job(job_name: str, user: User = Depends(get_current_user)):
+    _, batch_api = get_k8s_api()
+    result = batch_api.delete_namespaced_job(job_name, user.namespace)
+    return result.to_dict()
+
+
 @router.post("/jobs/")
 async def create_job(request: Request, user: User = Depends(get_current_user)):
     api, batch_api = get_k8s_api()

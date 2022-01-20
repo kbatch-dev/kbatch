@@ -72,7 +72,7 @@ def configure(kbatch_url=None, token=None) -> Path:
     return configpath
 
 
-def show_job(job_name, kbatch_url, token):
+def _do_job(job_name, kbatch_url, token, method: str):
     client = httpx.Client(follow_redirects=True)
     config = load_config()
 
@@ -83,12 +83,20 @@ def show_job(job_name, kbatch_url, token):
         "Authorization": f"token {token}",
     }
 
-    r = client.get(
-        urllib.parse.urljoin(kbatch_url, f"jobs/{job_name}"), headers=headers
+    r = client.request(
+        method, urllib.parse.urljoin(kbatch_url, f"jobs/{job_name}"), headers=headers
     )
     r.raise_for_status()
 
     return r.json()
+
+
+def show_job(job_name, kbatch_url, token):
+    return _do_job(job_name, kbatch_url, token, method="GET")
+
+
+def delete_job(job_name, kbatch_url, token):
+    return _do_job(job_name, kbatch_url, token, method="DELETE")
 
 
 def list_jobs(kbatch_url, token):
