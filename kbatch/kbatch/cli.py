@@ -19,12 +19,14 @@ def cli():
 @click.option("--kbatch-url")
 @click.option("--token")
 def configure(kbatch_url, token):
+    """Write a configuration file to use for future kbatch actions."""
     p = _core.configure(kbatch_url, token)
     rich.print(f"[green]Wrote config to[/green] [bold]{str(p)}[/bold]")
 
 
 @cli.group()
 def job():
+    """Manage kbatch jobs."""
     pass
 
 
@@ -33,7 +35,18 @@ def job():
 @click.option("--token", help="File to execute.")
 @click.argument("job_name")
 def show(job_name, kbatch_url, token):
+    """Show the details for a job."""
     result = _core.show_job(job_name, kbatch_url, token)
+    rich.print_json(data=result)
+
+
+@job.command()
+@click.option("--kbatch-url", help="URL to the kbatch server.")
+@click.option("--token", help="File to execute.")
+@click.argument("job_name")
+def delete(job_name, kbatch_url, token):
+    """Delete a job, cancelling running pods."""
+    result = _core.delete_job(job_name, kbatch_url, token)
     rich.print_json(data=result)
 
 
@@ -48,6 +61,7 @@ def show(job_name, kbatch_url, token):
     default="json",
 )
 def list_jobs(kbatch_url, token, output):
+    """List all the jobs."""
     result = _core.list_jobs(kbatch_url, token)
 
     if output == "json":
@@ -143,7 +157,7 @@ def submit(
 
 
 @cli.command()
-@click.option("--kbatch-url")
+@click.option("--kbatch-url", help="URL to the kbatch server.")
 def profiles(kbatch_url):
     """
     Show the profiles used by the server.
@@ -157,6 +171,7 @@ def profiles(kbatch_url):
 
 @cli.group()
 def pod():
+    """Manage job pods."""
     pass
 
 
@@ -174,6 +189,7 @@ def pod():
     default="json",
 )
 def list_pods(kbatch_url, token, job_name, output):
+    """List all the pods."""
     result = _core.list_pods(kbatch_url, token, job_name)
 
     if output == "json":
@@ -189,22 +205,23 @@ def list_pods(kbatch_url, token, job_name, output):
 
 
 @pod.command()
-@click.argument("job_name")
+@click.argument("pod_name")
 @click.option("--kbatch-url", help="URL to the kbatch server.")
 @click.option("--token", help="File to execute.")
 @click.option("--stream/--no-stream", help="Whether to stream the logs", default=False)
 @click.option("--read-timeout", help="Timeout for reading data", default=60, type=int)
 @click.option("--pretty/--no-pretty", default=True)
-def logs(job_name, kbatch_url, token, stream, pretty, read_timeout):
+def logs(pod_name, kbatch_url, token, stream, pretty, read_timeout):
+    """Get the logs for a kbatch pod."""
     if pretty:
         print = rich.print
 
     if stream:
         result = _core.logs_streaming(
-            job_name, kbatch_url, token, read_timeout=read_timeout
+            pod_name, kbatch_url, token, read_timeout=read_timeout
         )
     else:
-        result = _core.logs(job_name, kbatch_url, token, read_timeout=read_timeout)
+        result = _core.logs(pod_name, kbatch_url, token, read_timeout=read_timeout)
 
     if stream:
         for line in result:
