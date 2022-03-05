@@ -1,6 +1,6 @@
 # User Guide
 
-After you've [configured](configure-with-jupyterhub-deployment) `kbatch`, you can submit jobs, list previously submitted jobs, and query the details of individual jobs.
+After you've {ref}`configured <configure>` `kbatch`, you can submit jobs, list previously submitted jobs, and query the details of individual jobs.
 
 ## Submit a job
 

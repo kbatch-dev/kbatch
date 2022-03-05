@@ -28,6 +28,8 @@ For user-facing documentation, stay here. Administrators looking to deploy `kbat
 pip install kbatch
 ```
 
+(configure)=
+
 ## Configure with JupyterHub deployment
 
 Your Kubernetes / JupyterHub administrator might have deployed `kbatch` alongside your JupyterHub.
