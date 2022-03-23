@@ -1,6 +1,7 @@
 import datetime
 import base64
 import os
+import logging
 import json
 from pathlib import Path
 from typing import Optional, Dict, Union
@@ -11,6 +12,9 @@ import urllib.parse
 
 from ._types import Job
 from ._backend import make_configmap
+
+
+logger = logging.getLogger(__name__)
 
 
 def config_path() -> Path:
@@ -216,7 +220,11 @@ def submit_job(
         json=data,
         headers=headers,
     )
-    r.raise_for_status()
+    try:
+        r.raise_for_status()
+    except Exception:
+        logger.exception(r.json())
+        raise
 
     return r.json()
 

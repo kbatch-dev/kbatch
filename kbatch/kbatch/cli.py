@@ -1,12 +1,23 @@
 import json
+import logging
 from pathlib import Path
 
 import click
 import rich
+import rich.logging
 import yaml
 
 from . import _core
 from ._types import Job
+
+
+FORMAT = "%(message)s"
+logging.basicConfig(
+    level=logging.INFO,
+    format=FORMAT,
+    datefmt="[%X]",
+    handlers=[rich.logging.RichHandler()],
+)
 
 
 @click.group()

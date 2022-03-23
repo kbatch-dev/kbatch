@@ -239,7 +239,15 @@ async def create_job(request: Request, user: User = Depends(get_current_user)):
         patch.add_submitted_configmap_name(job, config_map)
 
     logger.info("Submitting job")
-    resp = batch_api.create_namespaced_job(namespace=user.namespace, body=job)
+    try:
+        resp = batch_api.create_namespaced_job(namespace=user.namespace, body=job)
+    except kubernetes.client.exceptions.ApiException as e:
+        content_type = e.headers.get("Content-Type")
+        if content_type:
+            headers = {"Content-Type": content_type}
+        else:
+            headers = {}
+        raise HTTPException(status_code=e.status, detail=e.body, headers=headers)
 
     if config_map:
         logger.info(
