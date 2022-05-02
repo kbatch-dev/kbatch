@@ -18,6 +18,7 @@ class Job:
     description: Optional[str] = None
     env: Dict[str, str] = field(default_factory=dict)
     code: Optional[str] = None
+    schedule: Optional[str] = None
 
     def to_kubernetes(self):
         from ._backend import make_job

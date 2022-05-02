@@ -207,7 +207,11 @@ def submit_job(
     # data = job.to_kubernetes().to_dict()
     profile = profile or {}
     data = make_job(job, profile=profile).to_dict()
-    data = {"job": data}
+    
+    if job.schedule:
+        data = {"cronjob": data}
+    else:
+        data = {"job": data}
     if code:
         cm = make_configmap(code, generate_name=job.name).to_dict()
         cm["binary_data"]["code"] = base64.b64encode(cm["binary_data"]["code"]).decode(

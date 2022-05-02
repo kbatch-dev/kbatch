@@ -86,6 +86,7 @@ def list_jobs(kbatch_url, token, output):
 @click.option("--image", help="Container image to use to execute job.")
 @click.option("--command", help="Command to execute.")
 @click.option("--args", help="Arguments to pass to the command.")
+@click.option("--schedule", help="The schedule this CronJob should run on.")
 @click.option("-e", "--env", help="JSON mapping of environment variables for the job.")
 @click.option("-d", "--description", help="A description of the job, optional.")
 @click.option(
@@ -112,6 +113,7 @@ def submit(
     image,
     command,
     args,
+    schedule,
     profile,
     kbatch_url,
     token,
@@ -144,6 +146,8 @@ def submit(
         data["args"] = args
     if command is not None:
         data["command"] = command
+    if schedule is not None:
+        data["schedule"] = schedule
     if env:
         env = json.loads(env)
         data["env"] = env

@@ -13,6 +13,8 @@ from typing import Optional, List, Dict, Union
 from kubernetes.client.models import (
     V1Job,
     V1JobSpec,
+    V1CronJob,
+    V1CronJobSpec,
     V1PodSpec,
     V1PodTemplateSpec,
     V1ObjectMeta,
@@ -47,7 +49,7 @@ SAFE_CHARS = set(string.ascii_lowercase + string.digits)
 def make_job(
     job: Job,
     profile: Optional[dict] = None,
-) -> V1Job:
+) -> Union[V1Job, V1CronJob]:
     """
     Make a Kubernetes pod specification for a user-submitted job.
     """
@@ -61,6 +63,7 @@ def make_job(
 
     command = job.command
     args = job.args
+    schedule = job.schedule 
 
     # annotations = k8s_config.annotations
     # labels = k8s_config.labels
@@ -171,6 +174,8 @@ def make_job(
     generate_name = name
     if not name.endswith("-"):
         generate_name = name + "-"
+    if schedule:
+        generate_name += "cron-"
 
     job_metadata = V1ObjectMeta(
         generate_name=generate_name,
@@ -178,7 +183,18 @@ def make_job(
         labels=labels,
     )
 
-    job = V1Job(
+    if schedule:
+        return V1CronJob(
+            api_version="batch/v1",
+            kind="CronJob",
+            metadata=job_metadata,
+            spec=V1CronJobSpec(
+                template=template, 
+                starting_deadline_seconds=300,
+            ),
+        )
+
+    return V1Job(
         api_version="batch/v1",
         kind="Job",
         metadata=job_metadata,
@@ -186,8 +202,6 @@ def make_job(
             template=template, backoff_limit=0, ttl_seconds_after_finished=300
         ),
     )
-    return job
-
 
 def make_configmap(code: Union[str, pathlib.Path], generate_name) -> V1ConfigMap:
     code = pathlib.Path(code)
