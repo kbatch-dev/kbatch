@@ -182,13 +182,14 @@ async def create_job(request: Request, user: User = Depends(get_current_user)):
     api, batch_api = get_k8s_api()
 
     data = await request.json()
-    job_data = data["job"]
+    model = kubernetes.client.models.V1Job if data.get("job") else kubernetes.client.models.V1CronJob
+    job_data = data.get("job") or data.get("cronjob")
 
     if job_template:
         job_data = utils.merge_json_objects(job_data, job_template)
 
-    job: kubernetes.client.models.V1Job = utils.parse(
-        job_data, model=kubernetes.client.models.V1Job
+    job = utils.parse(
+        job_data, model=model
     )
 
     code_data = data.get("code", None)
