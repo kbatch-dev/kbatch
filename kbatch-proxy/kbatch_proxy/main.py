@@ -367,7 +367,7 @@ def list_jobs(namespace: str) -> Tuple[Dict, Dict]:
     jobs = batch_api.list_namespaced_job(namespace).to_dict()
     cronjobs = batch_api.list_namespaced_cron_jobs(namespace).to_dict()
 
-    return jobs, cronjobs
+    return {"jobs": jobs, "cronjobs": cronjobs}
 
 
 
@@ -394,7 +394,7 @@ def action_on_job(job_name: str, namespace: str, action: str) -> str:
             if job['metadata']['name'] == job_name:
                 return 'cron_job'
 
-        raise ValueError(f"The job name specified, {job_name} cannot be found.")
+        raise ValueError(f"The job name specified, {job_name}, cannot be found.")
 
     _, batch_api = get_k8s_api()
     job_type = _job_type(job_name, namespace)

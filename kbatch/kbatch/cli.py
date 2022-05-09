@@ -73,7 +73,9 @@ def delete(job_name, kbatch_url, token):
 )
 def list_jobs(kbatch_url, token, output):
     """List all the jobs."""
-    jobs, cronjobs = _core.list_jobs(kbatch_url, token)
+    results = _core.list_jobs(kbatch_url, token)
+    jobs = results.get("jobs", {})
+    cronjobs = results.get("cronjobs", {})
 
     if output == "json":
         rich.print_json(data=jobs)

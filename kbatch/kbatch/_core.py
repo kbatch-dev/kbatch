@@ -298,7 +298,7 @@ def format_cronjobs(data):
         table.add_row(
             row["metadata"]["name"],
             row["metadata"]["creation_timestamp"],
-            row["spec"]["schedule"]
+            row["spec"]["schedule"],
         )
 
     return table
