@@ -73,12 +73,14 @@ def delete(job_name, kbatch_url, token):
 )
 def list_jobs(kbatch_url, token, output):
     """List all the jobs."""
-    result = _core.list_jobs(kbatch_url, token)
+    jobs, cronjobs = _core.list_jobs(kbatch_url, token)
 
     if output == "json":
-        rich.print_json(data=result)
+        rich.print_json(data=jobs)
+        rich.print_json(data=cronjobs)
     elif output == "table":
-        rich.print(_core.format_jobs(result))
+        rich.print(_core.format_jobs(jobs))
+        rich.print(_core.format_cronjobs(cronjobs))
 
 
 @job.command()

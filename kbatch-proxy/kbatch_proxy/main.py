@@ -158,23 +158,17 @@ def get_k8s_api() -> Tuple[kubernetes.client.CoreV1Api, kubernetes.client.BatchV
 
 @router.get("/jobs/{job_name}")
 async def read_job(job_name: str, user: User = Depends(get_current_user)):
-    _, batch_api = get_k8s_api()
-    result = batch_api.read_namespaced_job(job_name, user.namespace)
-    return result.to_dict()
+    return action_on_job(job_name, user.namespace, "read")
 
 
 @router.get("/jobs/")
 async def read_jobs(user: User = Depends(get_current_user)):
-    api, batch_api = get_k8s_api()
-    result = batch_api.list_namespaced_job(user.namespace)
-    return result.to_dict()
+    return list_jobs(user.namespace)
 
 
 @router.delete("/jobs/{job_name}")
 async def delete_job(job_name: str, user: User = Depends(get_current_user)):
-    _, batch_api = get_k8s_api()
-    result = batch_api.delete_namespaced_job(job_name, user.namespace)
-    return result.to_dict()
+    return action_on_job(job_name, user.namespace, "delete")
 
 
 @router.post("/jobs/")
@@ -359,3 +353,51 @@ def ensure_namespace(api: kubernetes.client.CoreV1Api, namespace: str):
         raise
     else:
         return True
+
+
+def list_jobs(namespace: str) -> Tuple[Dict, Dict]:
+    """
+    List Jobs and CronJobs currently running or scheduled in `namespace`.
+
+    Parameters
+    ----------
+    namespace : Kubernetes namespace to check for Jobs and CronJobs.
+    """
+    _, batch_api = get_k8s_api()
+    jobs = batch_api.list_namespaced_job(namespace).to_dict()
+    cronjobs = batch_api.list_namespaced_cron_jobs(namespace).to_dict()
+
+    return jobs, cronjobs
+
+
+
+def action_on_job(job_name: str, namespace: str, action: str) -> str:
+    """
+    Perform an action on `job_name`.
+
+    Parameters
+    ----------
+    job_name : name of the Kubernetes Job or CronJob.
+    namespace : Kubernetes namespace to check.
+    action : action to perform on `job_name`. Must match one item in `job_actions` list.
+    """
+    job_actions = ['read', 'delete']
+    if action not in job_actions:
+        raise ValueError(f"Unknown `action` specified: {action}. Please select from one of the following: {job_actions}.")
+
+    def _job_type(job_name, namespace):
+        jobs, cronjobs = list_jobs(namespace)
+        for job in jobs['items']:
+            if job['metadata']['name'] == job_name:
+                return 'job'
+        for job in cronjobs['items']:
+            if job['metadata']['name'] == job_name:
+                return 'cron_job'
+
+        raise ValueError(f"The job name specified, {job_name} cannot be found.")
+
+    _, batch_api = get_k8s_api()
+    job_type = _job_type(job_name, namespace)
+    f = getattr(batch_api, f"{action}_namespaced_{job_type}")
+
+    return f(job_name, namespace).to_dict()

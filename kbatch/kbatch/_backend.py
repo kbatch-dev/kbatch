@@ -13,6 +13,7 @@ from typing import Optional, List, Dict, Union
 from kubernetes.client.models import (
     V1Job,
     V1JobSpec,
+    V1JobTemplateSpec,
     V1CronJob,
     V1CronJobSpec,
     V1PodSpec,
@@ -183,13 +184,23 @@ def make_job(
         labels=labels,
     )
 
+    job_spec = V1JobSpec(
+        template=template, backoff_limit=0, ttl_seconds_after_finished=300
+    )
+
     if schedule:
+        job_template = V1JobTemplateSpec(
+            metadata=job_metadata,
+            spec=job_spec,
+        )
+
         return V1CronJob(
             api_version="batch/v1",
             kind="CronJob",
             metadata=job_metadata,
             spec=V1CronJobSpec(
-                template=template, 
+                schedule=schedule,
+                job_template=job_template,
                 starting_deadline_seconds=300,
             ),
         )
@@ -198,9 +209,7 @@ def make_job(
         api_version="batch/v1",
         kind="Job",
         metadata=job_metadata,
-        spec=V1JobSpec(
-            template=template, backoff_limit=0, ttl_seconds_after_finished=300
-        ),
+        spec=job_spec,
     )
 
 def make_configmap(code: Union[str, pathlib.Path], generate_name) -> V1ConfigMap:

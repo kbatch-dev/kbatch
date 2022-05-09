@@ -287,6 +287,23 @@ def format_jobs(data):
     return table
 
 
+def format_cronjobs(data):
+    table = rich.table.Table(title="CronJobs")
+
+    table.add_column("cronjob name", style="bold", no_wrap=True)
+    table.add_column("started")
+    table.add_column("schedule")
+
+    for row in data["items"]:
+        table.add_row(
+            row["metadata"]["name"],
+            row["metadata"]["creation_timestamp"],
+            row["spec"]["schedule"]
+        )
+
+    return table
+
+
 def format_pods(data):
     table = rich.table.Table(title="Pods")
 

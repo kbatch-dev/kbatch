@@ -51,6 +51,23 @@ $ kbatch job show list-files-jfprp
 
 With `kbatch job logs` you can get the logs for a job. Make sure to pass the container id.
 
+### Submitting a cron job
+
+If you'd like your job to run on a repeating schedule, just specify the schedule you would like:
+
+```{code-block} console
+$ kbatch job submit \
+    --name=list-files \
+    --image=alpine \
+    --command='["ls", "-lh"]'
+    --schedule='0 22 * * 1-5'
+```
+
+This job will now run at 22:00 on every day-of-week from Monday through Friday **indefinitely**.
+
+For those familiar with Linux cron jobs, the schedule syntax is the same. For those unfamiliar, have a read through the [Kubernetes CronJob - cron schedule syntax](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/#cron-schedule-syntax). The website [crontab.guru](https://crontab.guru/#0_22_*_*_1-5) is a nifty tool that tries to translate the schedule syntax into "plain" English.
+
+
 ## Submitting code files
 
 Your job likely relies on some local code files to function. Perhaps this is a notebook, shell script, or utility library that wouldn't be present in your container image. You can use the `-c` or `--code` option to provide a single file or list of files that will be made available before your job starts running.
