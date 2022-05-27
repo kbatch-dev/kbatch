@@ -26,10 +26,3 @@ __all__ = [
     "show_job",
     "logs",
 ]
-
-# canonical resource "kind" names
-CRONJOBS = "cronjobs"
-JOBS = "jobs"
-PODS = "pods"
-
-RESOURCE_KIND = [CRONJOBS, JOBS, PODS]

@@ -196,7 +196,9 @@ async def delete_job(job_name: str, user: User = Depends(get_current_user)):
 
 @router.post("/jobs/")
 async def create_job(request: Request, user: User = Depends(get_current_user)):
-    return create_job()
+    data = await request.json()
+    model = kubernetes.client.models.V1Job
+    return create(data, model, user)
 
 
 # pods #
@@ -296,7 +298,6 @@ def ensure_namespace(api: kubernetes.client.CoreV1Api, namespace: str):
         return True
 
 
-# def create_job(request: Request, user: User = Depends(get_current_user)):
 def create(data: dict, model, user: User = Depends(get_current_user)):
     api, batch_api = get_k8s_api()
 
@@ -326,7 +327,6 @@ def create(data: dict, model, user: User = Depends(get_current_user)):
     else:
         config_map = None
 
-    # How much of patch.py needs to be updated to accommodate cronjobs?
     patch.patch(
         job,
         config_map,
