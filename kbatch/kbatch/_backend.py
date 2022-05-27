@@ -8,7 +8,7 @@ import string
 import shutil
 import tempfile
 import zipfile
-from typing import Optional, List, Dict, Union
+from typing import Optional, List, Dict, Union, Type
 
 from kubernetes.client.models import (
     V1Job,
@@ -31,7 +31,7 @@ from kubernetes.client.models import (
     V1NodeSelectorRequirement,
 )
 
-from ._types import Job
+from ._types import BaseJob, CronJob, Job
 
 SAFE_CHARS = set(string.ascii_lowercase + string.digits)
 
@@ -47,13 +47,12 @@ SAFE_CHARS = set(string.ascii_lowercase + string.digits)
 #         )
 
 
-def make_job(
-    job: Job,
+def _make_job_spec(
+    job: Type[BaseJob],
     profile: Optional[dict] = None,
-) -> Union[V1Job, V1CronJob]:
-    """
-    Make a Kubernetes pod specification for a user-submitted job.
-    """
+    labels: Optional[dict] = None,
+    annotations: Optional[dict] = None,
+):
     profile = profile or {}
     name = job.name  # TODO: deduplicate somehow...
     image = job.image or profile.get("image", None)
@@ -64,19 +63,7 @@ def make_job(
 
     command = job.command
     args = job.args
-    schedule = job.schedule 
-
-    # annotations = k8s_config.annotations
-    # labels = k8s_config.labels
     env = job.env
-
-    # annotations = annotations or {}
-    annotations: Dict[str, str] = {}
-    # TODO: set in proxy
-
-    # labels = labels or {}
-    # labels = dict(labels)
-    labels: Dict[str, str] = {}
 
     # file_volume_mount = V1VolumeMount(mount_path="/code", name="file-volume")
     # file_volume = V1Volume(name="file-volume", empty_dir={})
@@ -172,11 +159,46 @@ def make_job(
         metadata=pod_metadata,
     )
 
+    # generate_name = name
+    # if not name.endswith("-"):
+    #     generate_name = name + "-"
+    # if schedule:
+    #     generate_name += "cron-"
+
+    return V1JobSpec(template=template, backoff_limit=0, ttl_seconds_after_finished=300)
+
+
+def _make_job_name(name: str, schedule: str = None):
     generate_name = name
     if not name.endswith("-"):
         generate_name = name + "-"
     if schedule:
         generate_name += "cron-"
+    return generate_name
+
+
+def make_cronjob(
+    cronjob: CronJob,
+    profile: Optional[dict] = None,
+) -> V1CronJob:
+    """
+    Make a Kubernetes pod specification for a user-submitted cronjob.
+    """
+    name = cronjob.name
+    schedule = cronjob.schedule
+
+    generate_name = _make_job_name(name, schedule=schedule)
+
+    # annotations = k8s_config.annotations
+    # labels = k8s_config.labels
+    annotations: Dict[str, str] = {}
+    # TODO: set in proxy
+
+    # labels = labels or {}
+    # labels = dict(labels)
+    labels: Dict[str, str] = {}
+
+    job_spec = _make_job_spec(cronjob, profile, labels, annotations)
 
     job_metadata = V1ObjectMeta(
         generate_name=generate_name,
@@ -184,26 +206,50 @@ def make_job(
         labels=labels,
     )
 
-    job_spec = V1JobSpec(
-        template=template, backoff_limit=0, ttl_seconds_after_finished=300
+    job_template = V1JobTemplateSpec(
+        metadata=job_metadata,
+        spec=job_spec,
     )
 
-    if schedule:
-        job_template = V1JobTemplateSpec(
-            metadata=job_metadata,
-            spec=job_spec,
-        )
+    return V1CronJob(
+        api_version="batch/v1",
+        kind="CronJob",
+        metadata=job_metadata,
+        spec=V1CronJobSpec(
+            schedule=cronjob.schedule,
+            job_template=job_template,
+            starting_deadline_seconds=300,
+        ),
+    )
 
-        return V1CronJob(
-            api_version="batch/v1",
-            kind="CronJob",
-            metadata=job_metadata,
-            spec=V1CronJobSpec(
-                schedule=schedule,
-                job_template=job_template,
-                starting_deadline_seconds=300,
-            ),
-        )
+
+def make_job(
+    job: Job,
+    profile: Optional[dict] = None,
+) -> V1Job:
+    """
+    Make a Kubernetes pod specification for a user-submitted job.
+    """
+    name = job.name
+
+    generate_name = _make_job_name(name)
+
+    # annotations = k8s_config.annotations
+    # labels = k8s_config.labels
+    annotations: Dict[str, str] = {}
+    # TODO: set in proxy
+
+    # labels = labels or {}
+    # labels = dict(labels)
+    labels: Dict[str, str] = {}
+
+    job_spec = _make_job_spec(job, profile, labels, annotations)
+
+    job_metadata = V1ObjectMeta(
+        generate_name=generate_name,
+        annotations=annotations,
+        labels=labels,
+    )
 
     return V1Job(
         api_version="batch/v1",
@@ -211,6 +257,173 @@ def make_job(
         metadata=job_metadata,
         spec=job_spec,
     )
+
+
+# def make_job(
+#     job: Type[BaseJob],
+#     profile: Optional[dict] = None,
+# ) -> Union[V1Job, V1CronJob]:
+#     """
+#     Make a Kubernetes pod specification for a user-submitted job.
+#     """
+# profile = profile or {}
+# name = job.name  # TODO: deduplicate somehow...
+# image = job.image or profile.get("image", None)
+# if image is None:
+#     raise TypeError(
+#         "Must specify 'image', either with `--image` or from the profile."
+#     )
+
+# command = job.command
+# args = job.args
+
+
+# # annotations = k8s_config.annotations
+# # labels = k8s_config.labels
+# env = job.env
+
+# annotations = annotations or {}
+# annotations: Dict[str, str] = {}
+# # TODO: set in proxy
+
+# # labels = labels or {}
+# # labels = dict(labels)
+# labels: Dict[str, str] = {}
+
+# file_volume_mount = V1VolumeMount(mount_path="/code", name="file-volume")
+# file_volume = V1Volume(name="file-volume", empty_dir={})
+
+# env_vars: Optional[List[V1EnvVar]] = None
+# if env:
+#     env_vars = [V1EnvVar(name=k, value=v) for k, v in env.items()]
+
+# container = V1Container(
+#     args=args,
+#     command=command,
+#     image=image,
+#     name="job",
+#     env=env_vars,
+#     # volume_mounts=[file_volume_mount],
+#     resources=V1ResourceRequirements(),
+#     # TODO: this is important. validate it!
+#     working_dir="/code",
+# )
+
+# resources = profile.get("resources", {})
+# limits = resources.get("limits", {})
+# requests = resources.get("requests", {})
+
+# container.resources.requests = {}
+# container.resources.limits = {}
+
+# if requests:
+#     container.resources.requests.update(requests)
+# if limits:
+#     container.resources.limits.update(limits)
+
+# pod_metadata = V1ObjectMeta(
+#     name=f"{name}-pod",
+#     # namespace=k8s_config.namespace,
+#     labels=labels,
+#     annotations=annotations,
+# )
+# tolerations = None
+# if profile.get("tolerations", []):
+#     tolerations = [V1Toleration(**v) for v in profile["tolerations"]]
+
+# node_affinity_required = profile.get("node_affinity_required", {})
+# if node_affinity_required:
+#     match_expressions = []
+#     match_fields = []
+#     for d in node_affinity_required:
+#         for k, affinities in d.items():
+#             for v in affinities:
+#                 if k == "matchExpressions":
+#                     match_expressions.append(
+#                         V1NodeSelectorRequirement(
+#                             key=v.get("key"),
+#                             operator=v.get("operator"),
+#                             values=v.get("values"),
+#                         )
+#                     )
+#                 elif k == "matchFields":
+#                     match_fields.append(
+#                         V1NodeSelectorRequirement(
+#                             key=v.get("key"),
+#                             operator=v.get("operator"),
+#                             values=v.get("values"),
+#                         )
+#                     )
+#                 else:
+#                     raise ValueError(
+#                         "Key must be 'matchExpressions' or 'matchFields'. Got {k} instead."
+#                     )
+
+#     node_selector_terms = V1NodeSelectorTerm(
+#         match_expressions=match_expressions,
+#         match_fields=match_fields,
+#     )
+#     node_selector = V1NodeSelector(node_selector_terms=[node_selector_terms])
+#     node_affinity = V1NodeAffinity(
+#         required_during_scheduling_ignored_during_execution=node_selector
+#     )
+#     affinity = V1Affinity(node_affinity=node_affinity)
+# else:
+#     affinity = None
+
+# # TODO: verify restart policy
+# template = V1PodTemplateSpec(
+#     spec=V1PodSpec(
+#         # init_containers=init_containers,
+#         containers=[container],
+#         restart_policy="Never",
+#         # volumes=[file_volume],
+#         tolerations=tolerations,
+#         affinity=affinity,
+#     ),
+#     metadata=pod_metadata,
+# )
+
+# generate_name = name
+# if not name.endswith("-"):
+#     generate_name = name + "-"
+# if schedule:
+#     generate_name += "cron-"
+
+# job_metadata = V1ObjectMeta(
+#     generate_name=generate_name,
+#     annotations=annotations,
+#     labels=labels,
+# )
+
+# job_spec = V1JobSpec(
+#     template=template, backoff_limit=0, ttl_seconds_after_finished=300
+# )
+
+# if schedule:
+#     job_template = V1JobTemplateSpec(
+#         metadata=job_metadata,
+#         spec=job_spec,
+#     )
+
+#     return V1CronJob(
+#         api_version="batch/v1",
+#         kind="CronJob",
+#         metadata=job_metadata,
+#         spec=V1CronJobSpec(
+#             schedule=schedule,
+#             job_template=job_template,
+#             starting_deadline_seconds=300,
+#         ),
+#     )
+
+# return V1Job(
+#     api_version="batch/v1",
+#     kind="Job",
+#     metadata=job_metadata,
+#     spec=job_spec,
+# )
+
 
 def make_configmap(code: Union[str, pathlib.Path], generate_name) -> V1ConfigMap:
     code = pathlib.Path(code)

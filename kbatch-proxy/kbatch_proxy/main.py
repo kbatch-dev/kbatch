@@ -155,7 +155,30 @@ def get_k8s_api() -> Tuple[kubernetes.client.CoreV1Api, kubernetes.client.BatchV
 # ----------------------------------------------------------------------------
 # app
 
+# cronjobs #
+@router.get("/cronjobs/{job_name}")
+async def read_cronjob(job_name: str, user: User = Depends(get_current_user)):
+    return action_on_job(job_name, user.namespace, "read")
 
+
+@router.get("/cronjobs/")
+async def read_cronjobs(user: User = Depends(get_current_user)):
+    return list_jobs(user.namespace)
+
+
+@router.delete("/cronjobs/{job_name}")
+async def delete_cronjob(job_name: str, user: User = Depends(get_current_user)):
+    return action_on_job(job_name, user.namespace, "delete")
+
+
+@router.post("/cronjobs/")
+async def create_cronjob(request: Request, user: User = Depends(get_current_user)):
+    data = await request.json()
+    model = kubernetes.client.models.V1CronJob
+    return create(data, model, user)
+
+
+# jobs #
 @router.get("/jobs/{job_name}")
 async def read_job(job_name: str, user: User = Depends(get_current_user)):
     return action_on_job(job_name, user.namespace, "read")
@@ -173,92 +196,10 @@ async def delete_job(job_name: str, user: User = Depends(get_current_user)):
 
 @router.post("/jobs/")
 async def create_job(request: Request, user: User = Depends(get_current_user)):
-    api, batch_api = get_k8s_api()
-
-    data = await request.json()
-    model = kubernetes.client.models.V1Job if data.get("job") else kubernetes.client.models.V1CronJob
-    job_data = data.get("job") or data.get("cronjob")
-
-    if job_template:
-        job_data = utils.merge_json_objects(job_data, job_template)
-
-    job = utils.parse(
-        job_data, model=model
-    )
-
-    code_data = data.get("code", None)
-    if code_data:
-        # The contents were base64encoded prior to being JSON serialized
-        # we have to decode it *after* submitting things to the API server...
-        # This is not great.
-        # code_data["binary_data"]["code"] = base64.b64decode(code_data["binary_data"]["code"])
-        config_map: Optional[kubernetes.client.models.V1ConfigMap] = utils.parse(
-            code_data, model=kubernetes.client.models.V1ConfigMap
-        )
-    else:
-        config_map = None
-
-    patch.patch(
-        job,
-        config_map,
-        annotations={},
-        labels={},
-        username=user.name,
-        ttl_seconds_after_finished=settings.kbatch_job_ttl_seconds_after_finished,
-        extra_env=settings.kbatch_job_extra_env,
-        api_token=user.api_token,
-    )
-
-    # What needs to happen when? We have a few requirements
-    # 1. The code ConfigMap must exist before adding it as a volume (we need a name,
-    #    and k8s requires that)
-    # 2. MAYBE: The Job must exist before adding it as an owner for the ConfigMap
-    #
-    # So I think we're at 3 requests:
-    #
-    # 1. Submit configmap
-    #   - ..
-    # 2. Submit Job
-    # 3. Patch ConfigMap to add Job as the owner
-    if settings.kbatch_create_user_namespace:
-        logger.info("Ensuring namespace %s", user.namespace)
-        created = ensure_namespace(api, user.namespace)
-        if created:
-            logger.info("Created namespace %s", user.namespace)
-
-    if config_map:
-        logger.info("Submitting ConfigMap")
-        config_map = api.create_namespaced_config_map(
-            namespace=user.namespace, body=config_map
-        )
-        patch.add_submitted_configmap_name(job, config_map)
-
-    logger.info("Submitting job")
-    try:
-        resp = batch_api.create_namespaced_job(namespace=user.namespace, body=job)
-    except kubernetes.client.exceptions.ApiException as e:
-        content_type = e.headers.get("Content-Type")
-        if content_type:
-            headers = {"Content-Type": content_type}
-        else:
-            headers = {}
-        raise HTTPException(status_code=e.status, detail=e.body, headers=headers)
-
-    if config_map:
-        logger.info(
-            "patching configmap %s with owner %s",
-            config_map.metadata.name,
-            resp.metadata.name,
-        )
-        patch.patch_configmap_owner(resp, config_map)
-        api.patch_namespaced_config_map(
-            name=config_map.metadata.name, namespace=user.namespace, body=config_map
-        )
-
-    # TODO: set Job as the owner of the code.
-    return resp.to_dict()
+    return create_job()
 
 
+# pods #
 @router.get("/pods/{pod_name}")
 async def read_pod(pod_name: str, user: User = Depends(get_current_user)):
     core_api, _ = get_k8s_api()
@@ -355,6 +296,98 @@ def ensure_namespace(api: kubernetes.client.CoreV1Api, namespace: str):
         return True
 
 
+# def create_job(request: Request, user: User = Depends(get_current_user)):
+def create(data: dict, model, user: User = Depends(get_current_user)):
+    api, batch_api = get_k8s_api()
+
+    # data = await request.json()
+    # model = (
+    #   kubernetes.client.models.V1Job
+    #   if data.get("job")
+    #   else kubernetes.client.models.V1CronJob
+    # )
+
+    job_data = data.get("job") or data.get("cronjob")
+
+    if job_template:
+        job_data = utils.merge_json_objects(job_data, job_template)
+
+    job = utils.parse(job_data, model=model)
+
+    code_data = data.get("code", None)
+    if code_data:
+        # The contents were base64encoded prior to being JSON serialized
+        # we have to decode it *after* submitting things to the API server...
+        # This is not great.
+        # code_data["binary_data"]["code"] = base64.b64decode(code_data["binary_data"]["code"])
+        config_map: Optional[kubernetes.client.models.V1ConfigMap] = utils.parse(
+            code_data, model=kubernetes.client.models.V1ConfigMap
+        )
+    else:
+        config_map = None
+
+    # How much of patch.py needs to be updated to accommodate cronjobs?
+    patch.patch(
+        job,
+        config_map,
+        annotations={},
+        labels={},
+        username=user.name,
+        ttl_seconds_after_finished=settings.kbatch_job_ttl_seconds_after_finished,
+        extra_env=settings.kbatch_job_extra_env,
+        api_token=user.api_token,
+    )
+
+    # What needs to happen when? We have a few requirements
+    # 1. The code ConfigMap must exist before adding it as a volume (we need a name,
+    #    and k8s requires that)
+    # 2. MAYBE: The Job must exist before adding it as an owner for the ConfigMap
+    #
+    # So I think we're at 3 requests:
+    #
+    # 1. Submit configmap
+    #   - ..
+    # 2. Submit Job
+    # 3. Patch ConfigMap to add Job as the owner
+    if settings.kbatch_create_user_namespace:
+        logger.info("Ensuring namespace %s", user.namespace)
+        created = ensure_namespace(api, user.namespace)
+        if created:
+            logger.info("Created namespace %s", user.namespace)
+
+    if config_map:
+        logger.info("Submitting ConfigMap")
+        config_map = api.create_namespaced_config_map(
+            namespace=user.namespace, body=config_map
+        )
+        patch.add_submitted_configmap_name(job, config_map)
+
+    logger.info("Submitting job")
+    try:
+        resp = batch_api.create_namespaced_job(namespace=user.namespace, body=job)
+    except kubernetes.client.exceptions.ApiException as e:
+        content_type = e.headers.get("Content-Type")
+        if content_type:
+            headers = {"Content-Type": content_type}
+        else:
+            headers = {}
+        raise HTTPException(status_code=e.status, detail=e.body, headers=headers)
+
+    if config_map:
+        logger.info(
+            "patching configmap %s with owner %s",
+            config_map.metadata.name,
+            resp.metadata.name,
+        )
+        patch.patch_configmap_owner(resp, config_map)
+        api.patch_namespaced_config_map(
+            name=config_map.metadata.name, namespace=user.namespace, body=config_map
+        )
+
+    # TODO: set Job as the owner of the code.
+    return resp.to_dict()
+
+
 def list_jobs(namespace: str) -> Tuple[Dict, Dict]:
     """
     List Jobs and CronJobs currently running or scheduled in `namespace`.
@@ -370,7 +403,6 @@ def list_jobs(namespace: str) -> Tuple[Dict, Dict]:
     return {"jobs": jobs, "cronjobs": cronjobs}
 
 
-
 def action_on_job(job_name: str, namespace: str, action: str) -> str:
     """
     Perform an action on `job_name`.
@@ -379,20 +411,24 @@ def action_on_job(job_name: str, namespace: str, action: str) -> str:
     ----------
     job_name : name of the Kubernetes Job or CronJob.
     namespace : Kubernetes namespace to check.
-    action : action to perform on `job_name`. Must match one item in `job_actions` list.
+    action : action to perform on `job_name`.
+        Must match one item in `job_actions` list.
     """
-    job_actions = ['read', 'delete']
+    job_actions = ["read", "delete"]
     if action not in job_actions:
-        raise ValueError(f"Unknown `action` specified: {action}. Please select from one of the following: {job_actions}.")
+        raise ValueError(
+            f"Unknown `action` specified: {action}. "
+            + "Please select from one of the following: {job_actions}."
+        )
 
     def _job_type(job_name, namespace):
         jobs, cronjobs = list_jobs(namespace)
-        for job in jobs['items']:
-            if job['metadata']['name'] == job_name:
-                return 'job'
-        for job in cronjobs['items']:
-            if job['metadata']['name'] == job_name:
-                return 'cron_job'
+        for job in jobs["items"]:
+            if job["metadata"]["name"] == job_name:
+                return "job"
+        for job in cronjobs["items"]:
+            if job["metadata"]["name"] == job_name:
+                return "cron_job"
 
         raise ValueError(f"The job name specified, {job_name}, cannot be found.")
 
