@@ -3,9 +3,9 @@ import logging
 import click
 import rich
 import rich.logging
+from kubernetes.client.models import V1Job, V1CronJob
 
 from . import _core
-from ._core import CRONJOBS, JOBS
 from ._types import CronJob, Job
 
 
@@ -53,23 +53,23 @@ def cronjob():
     pass
 
 
-@cronjob.command()
+@cronjob.command(name="show")
 @click.option("--kbatch-url", help="URL to the kbatch server.")
 @click.option("--token", help="File to execute.")
 @click.argument("cronjob_name")
 def show_cronjob(cronjob_name, kbatch_url, token):
     """Show the details for a cronjob."""
-    result = _core.show_job(cronjob_name, kbatch_url, token, CRONJOBS)
+    result = _core.show_job(cronjob_name, kbatch_url, token, V1CronJob)
     rich.print_json(data=result)
 
 
-@cronjob.command()
+@cronjob.command(name="delete")
 @click.option("--kbatch-url", help="URL to the kbatch server.")
 @click.option("--token", help="File to execute.")
 @click.argument("cronjob_name")
 def delete_cronjob(cronjob_name, kbatch_url, token):
     """Delete a cronjob, cancelling running jobs and pods."""
-    result = _core.delete_job(cronjob_name, kbatch_url, token, CRONJOBS)
+    result = _core.delete_job(cronjob_name, kbatch_url, token, V1CronJob)
     rich.print_json(data=result)
 
 
@@ -85,7 +85,7 @@ def delete_cronjob(cronjob_name, kbatch_url, token):
 )
 def list_cronjobs(kbatch_url, token, output):
     """List all the cronjobs."""
-    results = _core.list_jobs(kbatch_url, token, CRONJOBS)
+    results = _core.list_jobs(kbatch_url, token, V1CronJob)
 
     if output == "json":
         rich.print_json(data=results)
@@ -93,14 +93,16 @@ def list_cronjobs(kbatch_url, token, output):
         rich.print(_core.format_cronjobs(results))
 
 
-@cronjob.command()
-@click.option("-n", "--name", help="CronJob name.")
+@cronjob.command(name="submit")
+@click.argument("cronjob_name")
 @click.option("--image", help="Container image to use to execute job.")
 @click.option("--command", help="Command to execute.")
 @click.option("--args", help="Arguments to pass to the command.")
-@click.option("--schedule", help="The schedule this CronJob should run on.")
+@click.option(
+    "--schedule", help="The schedule this cronjob should run on.", required=True
+)
 @click.option("-e", "--env", help="JSON mapping of environment variables for the job.")
-@click.option("-d", "--description", help="A description of the CronJob, optional.")
+@click.option("-d", "--description", help="A description of the cronjob, optional.")
 @click.option(
     "-c",
     "--code",
@@ -158,7 +160,7 @@ def submit_cronjob(
         job=cronjob,
         kbatch_url=kbatch_url,
         token=token,
-        resource_type=CRONJOBS,
+        model=V1CronJob,
         code=code,
         profile=profile,
     )
@@ -175,23 +177,23 @@ def job():
     pass
 
 
-@job.command()
+@job.command(name="show")
 @click.option("--kbatch-url", help="URL to the kbatch server.")
 @click.option("--token", help="File to execute.")
 @click.argument("job_name")
-def show(job_name, kbatch_url, token):
+def show_job(job_name, kbatch_url, token):
     """Show the details for a job."""
-    result = _core.show_job(job_name, kbatch_url, token, JOBS)
+    result = _core.show_job(job_name, kbatch_url, token, V1Job)
     rich.print_json(data=result)
 
 
-@job.command()
+@job.command(name="delete")
 @click.option("--kbatch-url", help="URL to the kbatch server.")
 @click.option("--token", help="File to execute.")
 @click.argument("job_name")
-def delete(job_name, kbatch_url, token):
+def delete_job(job_name, kbatch_url, token):
     """Delete a job, cancelling running pods."""
-    result = _core.delete_job(job_name, kbatch_url, token, JOBS)
+    result = _core.delete_job(job_name, kbatch_url, token, V1Job)
     rich.print_json(data=result)
 
 
@@ -207,20 +209,19 @@ def delete(job_name, kbatch_url, token):
 )
 def list_jobs(kbatch_url, token, output):
     """List all the jobs."""
-    results = _core.list_jobs(kbatch_url, token, JOBS)
+    results = _core.list_jobs(kbatch_url, token, V1Job)
 
     if output == "json":
-        rich.print_json(results)
+        rich.print_json(data=results)
     elif output == "table":
-        rich.print(results)
+        rich.print(_core.format_jobs(results))
 
 
-@job.command()
-@click.option("-n", "--name", help="Job name.")
+@job.command(name="submit")
+@click.argument("job_name")
 @click.option("--image", help="Container image to use to execute job.")
 @click.option("--command", help="Command to execute.")
 @click.option("--args", help="Arguments to pass to the command.")
-@click.option("--schedule", help="The schedule this CronJob should run on.")
 @click.option("-e", "--env", help="JSON mapping of environment variables for the job.")
 @click.option("-d", "--description", help="A description of the job, optional.")
 @click.option(
@@ -239,7 +240,7 @@ def list_jobs(kbatch_url, token, output):
     help="Output format.",
     type=click.Choice(["json", "name"]),
 )
-def submit(
+def submit_job(
     file,
     code,
     name,
@@ -276,7 +277,7 @@ def submit(
         job,
         kbatch_url=kbatch_url,
         token=token,
-        resource_type=JOBS,
+        model=V1Job,
         code=code,
         profile=profile,
     )

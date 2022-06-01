@@ -1,13 +1,13 @@
 import os
 import logging
-from typing import List, Optional, Tuple, Dict
+from typing import List, Optional, Tuple, Dict, Union
 
 import yaml
 from pydantic import BaseModel, BaseSettings
 import jupyterhub.services.auth
 from fastapi import Depends, FastAPI, HTTPException, Request, status, APIRouter
 import kubernetes.client
-import kubernetes.client.models
+from kubernetes.client.models import V1CronJob, V1Job, V1ConfigMap
 import kubernetes.config
 import kubernetes.watch
 import rich.traceback
@@ -88,9 +88,7 @@ if settings.kbatch_job_template_file:
         job_template = yaml.safe_load(f)
 
     # parse with Kubernetes to normalize keys with job_data
-    job_template = utils.parse(
-        job_template, model=kubernetes.client.models.V1Job
-    ).to_dict()
+    job_template = utils.parse(job_template, model=V1Job).to_dict()
     utils.remove_nulls(job_template)
 
 else:
@@ -158,47 +156,45 @@ def get_k8s_api() -> Tuple[kubernetes.client.CoreV1Api, kubernetes.client.BatchV
 # cronjobs #
 @router.get("/cronjobs/{job_name}")
 async def read_cronjob(job_name: str, user: User = Depends(get_current_user)):
-    return action_on_job(job_name, user.namespace, "read")
+    return _perform_action(job_name, user.namespace, "read", V1CronJob)
 
 
 @router.get("/cronjobs/")
 async def read_cronjobs(user: User = Depends(get_current_user)):
-    return list_jobs(user.namespace)
+    return _perform_action(None, user.namespace, "list", V1CronJob)
 
 
 @router.delete("/cronjobs/{job_name}")
 async def delete_cronjob(job_name: str, user: User = Depends(get_current_user)):
-    return action_on_job(job_name, user.namespace, "delete")
+    return _perform_action(job_name, user.namespace, "delete", V1CronJob)
 
 
 @router.post("/cronjobs/")
 async def create_cronjob(request: Request, user: User = Depends(get_current_user)):
     data = await request.json()
-    model = kubernetes.client.models.V1CronJob
-    return create(data, model, user)
+    return _create_job(data, V1CronJob, user)
 
 
 # jobs #
 @router.get("/jobs/{job_name}")
 async def read_job(job_name: str, user: User = Depends(get_current_user)):
-    return action_on_job(job_name, user.namespace, "read")
+    return _perform_action(job_name, user.namespace, "read", V1Job)
 
 
 @router.get("/jobs/")
 async def read_jobs(user: User = Depends(get_current_user)):
-    return list_jobs(user.namespace)
+    return _perform_action(None, user.namespace, "list", V1Job)
 
 
 @router.delete("/jobs/{job_name}")
 async def delete_job(job_name: str, user: User = Depends(get_current_user)):
-    return action_on_job(job_name, user.namespace, "delete")
+    return _perform_action(job_name, user.namespace, "delete", V1Job)
 
 
 @router.post("/jobs/")
 async def create_job(request: Request, user: User = Depends(get_current_user)):
     data = await request.json()
-    model = kubernetes.client.models.V1Job
-    return create(data, model, user)
+    return _create_job(data, V1Job, user)
 
 
 # pods #
@@ -298,22 +294,40 @@ def ensure_namespace(api: kubernetes.client.CoreV1Api, namespace: str):
         return True
 
 
-def create(data: dict, model, user: User = Depends(get_current_user)):
+def _create_job(
+    data: dict,
+    model: Union[V1CronJob, V1Job],
+    user: User = Depends(get_current_user),
+):
+    """
+    Create a Kubernetes batch Job or CronJob.
+
+    This is handled in three steps:
+    1. Submit ConfigMap
+    2. Submit Job/CronJob
+    3. Patch ConfigMap to add Job/CronJob as the owner
+
+    Parameters
+    ----------
+    data : data specific to the Job or CronJob.
+    model : kubernetes batch models, "V1Job" "V1CronJob".
+    user : a `User` object which holds specific configuration settings.
+    """
     api, batch_api = get_k8s_api()
 
-    # data = await request.json()
-    # model = (
-    #   kubernetes.client.models.V1Job
-    #   if data.get("job")
-    #   else kubernetes.client.models.V1CronJob
-    # )
+    job_data = data["job"]
 
-    job_data = data.get("job") or data.get("cronjob")
-
+    # does it handle cronjob job specs appropriately?
     if job_template:
         job_data = utils.merge_json_objects(job_data, job_template)
 
+    # can be either job or cronjob
     job = utils.parse(job_data, model=model)
+    job_to_patch = job
+
+    if issubclass(model, V1CronJob):
+        j = job_data.get("spec", {}).get("job_template", {})
+        job_to_patch = utils.parse(j, V1Job)
 
     code_data = data.get("code", None)
     if code_data:
@@ -321,14 +335,12 @@ def create(data: dict, model, user: User = Depends(get_current_user)):
         # we have to decode it *after* submitting things to the API server...
         # This is not great.
         # code_data["binary_data"]["code"] = base64.b64decode(code_data["binary_data"]["code"])
-        config_map: Optional[kubernetes.client.models.V1ConfigMap] = utils.parse(
-            code_data, model=kubernetes.client.models.V1ConfigMap
-        )
+        config_map: Optional[V1ConfigMap] = utils.parse(code_data, model=V1ConfigMap)
     else:
         config_map = None
 
     patch.patch(
-        job,
+        job_to_patch,
         config_map,
         annotations={},
         labels={},
@@ -364,7 +376,13 @@ def create(data: dict, model, user: User = Depends(get_current_user)):
 
     logger.info("Submitting job")
     try:
-        resp = batch_api.create_namespaced_job(namespace=user.namespace, body=job)
+        if issubclass(model, V1Job):
+            resp = batch_api.create_namespaced_job(namespace=user.namespace, body=job)
+        elif issubclass(model, V1CronJob):
+            resp = batch_api.create_namespaced_cron_job(
+                namespace=user.namespace, body=job
+            )
+
     except kubernetes.client.exceptions.ApiException as e:
         content_type = e.headers.get("Content-Type")
         if content_type:
@@ -388,22 +406,12 @@ def create(data: dict, model, user: User = Depends(get_current_user)):
     return resp.to_dict()
 
 
-def list_jobs(namespace: str) -> Tuple[Dict, Dict]:
-    """
-    List Jobs and CronJobs currently running or scheduled in `namespace`.
-
-    Parameters
-    ----------
-    namespace : Kubernetes namespace to check for Jobs and CronJobs.
-    """
-    _, batch_api = get_k8s_api()
-    jobs = batch_api.list_namespaced_job(namespace).to_dict()
-    cronjobs = batch_api.list_namespaced_cron_jobs(namespace).to_dict()
-
-    return {"jobs": jobs, "cronjobs": cronjobs}
-
-
-def action_on_job(job_name: str, namespace: str, action: str) -> str:
+def _perform_action(
+    job_name: Union[str, None],
+    namespace: str,
+    action: str,
+    model: Union[V1Job, V1CronJob],
+) -> str:
     """
     Perform an action on `job_name`.
 
@@ -413,27 +421,24 @@ def action_on_job(job_name: str, namespace: str, action: str) -> str:
     namespace : Kubernetes namespace to check.
     action : action to perform on `job_name`.
         Must match one item in `job_actions` list.
+    model : kubernetes batch models, "V1Job" "V1CronJob"
     """
-    job_actions = ["read", "delete"]
+    job_actions = ["list", "read", "delete"]
     if action not in job_actions:
         raise ValueError(
             f"Unknown `action` specified: {action}. "
             + "Please select from one of the following: {job_actions}."
         )
 
-    def _job_type(job_name, namespace):
-        jobs, cronjobs = list_jobs(namespace)
-        for job in jobs["items"]:
-            if job["metadata"]["name"] == job_name:
-                return "job"
-        for job in cronjobs["items"]:
-            if job["metadata"]["name"] == job_name:
-                return "cron_job"
-
-        raise ValueError(f"The job name specified, {job_name}, cannot be found.")
+    if issubclass(model, V1Job):
+        model = "job"
+    elif issubclass(model, V1CronJob):
+        model = "cron_job"
 
     _, batch_api = get_k8s_api()
-    job_type = _job_type(job_name, namespace)
-    f = getattr(batch_api, f"{action}_namespaced_{job_type}")
+    f = getattr(batch_api, f"{action}_namespaced_{model}")
 
-    return f(job_name, namespace).to_dict()
+    if action == "list":
+        return f(namespace).to_dict()
+    else:
+        return f(job_name, namespace).to_dict()

@@ -4,24 +4,18 @@ import os
 import logging
 import json
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Optional, Dict, Union
 
 import rich.table
 import httpx
 import urllib.parse
 import yaml
+from kubernetes.client.models import V1CronJob, V1Job
 
 from ._backend import make_configmap
 
 
 logger = logging.getLogger(__name__)
-
-# canonical resource "kind" names
-CRONJOBS = "cronjobs"
-JOBS = "jobs"
-PODS = "pods"
-
-RESOURCE_KIND = [CRONJOBS, JOBS, PODS]
 
 
 def config_path() -> Path:
@@ -85,10 +79,10 @@ def configure(kbatch_url=None, token=None) -> Path:
 
 def _request_action(
     kbatch_url: str,
-    token: str,
+    token: Optional[str],
     method: str,
-    resource_kind: str,
-    resource_name: Optional[dict] = None,
+    model: Union[V1Job, V1CronJob],
+    resource_name: str = None,
     json_data: Optional[dict] = None,
 ):
     client = httpx.Client(follow_redirects=True)
@@ -108,13 +102,9 @@ def _request_action(
             + "Please select from one of the following: {http_methods}."
         )
 
-    if resource_kind not in RESOURCE_KIND:
-        raise ValueError(
-            f"Unknown resource specified: {resource_kind}. "
-            + "Please select from one of the following: {RESOURCE_KIND}."
-        )
+    print(model)
+    endpoint = "jobs/" if issubclass(model, V1Job) else "cronjobs/"
 
-    endpoint = f"{resource_kind}/"
     if resource_name:
         endpoint += resource_name
 
@@ -124,7 +114,6 @@ def _request_action(
         headers=headers,
         json=json_data,
     )
-    print(r)
     try:
         r.raise_for_status()
     except Exception:
@@ -134,25 +123,43 @@ def _request_action(
     return r.json()
 
 
-def show_job(resource_name, kbatch_url, token, resource_kind="jobs"):
-    return _request_action(kbatch_url, token, "GET", resource_kind, resource_name)
+def show_job(resource_name, kbatch_url, token, model: Union[V1Job, V1CronJob] = V1Job):
+    return _request_action(kbatch_url, token, "GET", model, resource_name)
 
 
-def delete_job(resource_name, kbatch_url, token, resource_kind="jobs"):
-    return _request_action(kbatch_url, token, "DELETE", resource_kind, resource_name)
+def delete_job(
+    resource_name, kbatch_url, token, model: Union[V1Job, V1CronJob] = V1Job
+):
+    return _request_action(kbatch_url, token, "DELETE", model, resource_name)
 
 
-def list_jobs(kbatch_url, token, resource_kind="jobs"):
-    return _request_action(kbatch_url, token, "GET", resource_kind)
+def list_jobs(kbatch_url, token, model: Union[V1Job, V1CronJob] = V1Job):
+    return _request_action(kbatch_url, token, "GET", model)
 
 
 def submit_job(
-    job, kbatch_url, token=None, resource_kind="jobs", code=None, profile=None
+    job,
+    kbatch_url,
+    token=None,
+    model: Union[V1Job, V1CronJob] = V1Job,
+    code=None,
+    profile=None,
 ):
-    from ._backend import make_job
+    from ._backend import make_job, make_cronjob
 
     profile = profile or {}
-    data = make_job(job, profile=profile).to_dict()
+
+    if issubclass(model, V1Job):
+        data = make_job(job, profile=profile).to_dict()
+    elif issubclass(model, V1CronJob):
+        data = make_cronjob(job, profile=profile).to_dict()
+    else:
+        raise ValueError(
+            f"Unknown resource specified: {model}. "
+            + "Please select from one of the following: `V1Job` or `V1CronJob`."
+        )
+
+    data = {"job": data}
 
     if code:
         cm = make_configmap(code, generate_name=job.name).to_dict()
@@ -160,8 +167,8 @@ def submit_job(
             "ascii"
         )
         data["code"] = cm
-    print(data)
-    return _request_action(kbatch_url, token, "POST", resource_kind, json_data=data)
+
+    return _request_action(kbatch_url, token, "POST", model, json_data=data)
 
 
 def list_pods(kbatch_url: str, token: Optional[str], job_name: Optional[str] = None):

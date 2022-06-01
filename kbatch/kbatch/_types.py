@@ -9,12 +9,8 @@ class User:
 
 
 @dataclass()
-class _BaseJob:
+class Job:
     name: str
-
-
-@dataclass()
-class _BaseJobDefaults:
     image: Optional[str] = None
     command: Optional[List[str]] = None
     args: Optional[List[str]] = None
@@ -23,25 +19,27 @@ class _BaseJobDefaults:
     env: Dict[str, str] = field(default_factory=dict)
     code: Optional[str] = None
 
-
-@dataclass()
-class _CronJob:
-    schedule: str
-
-
-@dataclass()
-class BaseJob(_BaseJobDefaults, _BaseJob):
     def to_kubernetes(self):
-        from ._backend import make_job
-
-        return make_job(self)
+        return _to_kubernetes()
 
 
 @dataclass()
-class Job(BaseJob):
-    pass
-
-
-@dataclass()
-class CronJob(BaseJob, _CronJob):
+class CronJob:
+    name: str
     schedule: str
+    image: Optional[str] = None
+    command: Optional[List[str]] = None
+    args: Optional[List[str]] = None
+    upload: Optional[str] = None
+    description: Optional[str] = None
+    env: Dict[str, str] = field(default_factory=dict)
+    code: Optional[str] = None
+
+    def to_kubernetes(self):
+        return _to_kubernetes()
+
+
+def _to_kubernetes(self):
+    from ._backend import make_job
+
+    return make_job(self)

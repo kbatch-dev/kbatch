@@ -8,7 +8,7 @@ import string
 import shutil
 import tempfile
 import zipfile
-from typing import Optional, List, Dict, Union, Type
+from typing import Optional, List, Dict, Union
 
 from kubernetes.client.models import (
     V1Job,
@@ -31,7 +31,7 @@ from kubernetes.client.models import (
     V1NodeSelectorRequirement,
 )
 
-from ._types import BaseJob, CronJob, Job
+from ._types import CronJob, Job
 
 SAFE_CHARS = set(string.ascii_lowercase + string.digits)
 
@@ -48,7 +48,7 @@ SAFE_CHARS = set(string.ascii_lowercase + string.digits)
 
 
 def _make_job_spec(
-    job: Type[BaseJob],
+    job: Union[Job, CronJob],
     profile: Optional[dict] = None,
     labels: Optional[dict] = None,
     annotations: Optional[dict] = None,
