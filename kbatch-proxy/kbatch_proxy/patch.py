@@ -3,11 +3,12 @@ Patch a V1Job.
 """
 import re
 import string
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 import escapism
 from kubernetes.client.models import (
     V1Job,
+    V1JobTemplateSpec,
     V1ConfigMap,
     V1Container,
     V1VolumeMount,
@@ -22,7 +23,9 @@ from kubernetes.client.models import (
 SAFE_CHARS = set(string.ascii_lowercase + string.digits)
 
 
-def add_annotations(job: V1Job, annotations, username: str) -> None:
+def add_annotations(
+    job: Union[V1Job, V1JobTemplateSpec], annotations, username: str
+) -> None:
     annotations = dict(annotations)
     annotations["kbatch.jupyter.org/username"] = username
 
@@ -30,7 +33,7 @@ def add_annotations(job: V1Job, annotations, username: str) -> None:
     job.spec.template.metadata.annotations.update(annotations)  # update or replace?
 
 
-def add_labels(job: V1Job, labels, username: str) -> None:
+def add_labels(job: Union[V1Job, V1JobTemplateSpec], labels, username: str) -> None:
     labels = dict(labels)
     labels["kbatch.jupyter.org/username"] = escapism.escape(
         username, safe=SAFE_CHARS, escape_char="-"
@@ -40,7 +43,7 @@ def add_labels(job: V1Job, labels, username: str) -> None:
     job.spec.template.metadata.labels.update(labels)  # update or replace?
 
 
-def add_namespace(job: V1Job, namespace: str) -> None:
+def add_namespace(job: Union[V1Job, V1JobTemplateSpec], namespace: str) -> None:
     job.metadata.namespace = namespace
     job.spec.template.metadata.namespace = namespace
 
@@ -49,11 +52,11 @@ def add_namespace_configmap(config_map: V1ConfigMap, namespace: str) -> None:
     config_map.metadata.namespace = namespace
 
 
-def add_code_configmap(job: V1Job) -> None:
+def add_code_configmap(job: Union[V1Job, V1JobTemplateSpec]) -> None:
     pass
 
 
-def add_unzip_init_container(job: V1Job) -> None:
+def add_unzip_init_container(job: Union[V1Job, V1JobTemplateSpec]) -> None:
     """
     Adds an init container to unzip the code.
     """
@@ -110,7 +113,9 @@ def add_unzip_init_container(job: V1Job) -> None:
 
 
 def add_extra_env(
-    job: V1Job, extra_env: Dict[str, str], api_token: Optional[str] = None
+    job: Union[V1Job, V1JobTemplateSpec],
+    extra_env: Dict[str, str],
+    api_token: Optional[str] = None,
 ) -> None:
     container = job.spec.template.spec.containers[0]
     env_vars = [V1EnvVar(name=name, value=value) for name, value in extra_env.items()]
@@ -146,13 +151,13 @@ def namespace_for_username(username: str) -> str:
 
 
 def add_job_ttl_seconds_after_finished(
-    job: V1Job, ttl_seconds_after_finished: Optional[int]
+    job: Union[V1Job, V1JobTemplateSpec], ttl_seconds_after_finished: Optional[int]
 ) -> None:
     job.spec.ttl_seconds_after_finished = ttl_seconds_after_finished
 
 
 def patch(
-    job: V1Job,
+    job: Union[V1Job, V1JobTemplateSpec],
     config_map: Optional[V1ConfigMap],
     *,
     username: str,
@@ -185,13 +190,17 @@ def patch(
         add_unzip_init_container(job)
 
 
-def add_submitted_configmap_name(job: V1Job, config_map: V1ConfigMap):
+def add_submitted_configmap_name(
+    job: Union[V1Job, V1JobTemplateSpec], config_map: V1ConfigMap
+):
     # config_map should be the response from the Kubernetes API server with the
     # submitted name
     job.spec.template.spec.volumes[-2].config_map.name = config_map.metadata.name
 
 
-def patch_configmap_owner(job: V1Job, config_map: V1ConfigMap):
+def patch_configmap_owner(
+    job: Union[V1Job, V1JobTemplateSpec], config_map: V1ConfigMap
+):
     if job.metadata.name is None:
         raise ValueError("job must have a name before it can be set as an owner")
     assert job.metadata.name is not None

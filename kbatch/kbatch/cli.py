@@ -94,7 +94,7 @@ def list_cronjobs(kbatch_url, token, output):
 
 
 @cronjob.command(name="submit")
-@click.argument("cronjob_name")
+@click.option("-n", "--name", help="CronJob name.", required=True)
 @click.option("--image", help="Container image to use to execute job.")
 @click.option("--command", help="Command to execute.")
 @click.option("--args", help="Arguments to pass to the command.")
@@ -218,7 +218,7 @@ def list_jobs(kbatch_url, token, output):
 
 
 @job.command(name="submit")
-@click.argument("job_name")
+@click.option("-n", "--name", help="Job name.", required=True)
 @click.option("--image", help="Container image to use to execute job.")
 @click.option("--command", help="Command to execute.")
 @click.option("--args", help="Arguments to pass to the command.")

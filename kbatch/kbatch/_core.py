@@ -102,7 +102,6 @@ def _request_action(
             + "Please select from one of the following: {http_methods}."
         )
 
-    print(model)
     endpoint = "jobs/" if issubclass(model, V1Job) else "cronjobs/"
 
     if resource_name:
