@@ -10,8 +10,8 @@ from ._core import (
     list_pods,
     logs_streaming,
 )
-from ._types import Job
-from ._backend import make_job
+from ._types import Job, CronJob
+from ._backend import make_job, make_cronjob
 
 
 __version__ = "0.3.2"
@@ -22,6 +22,7 @@ __all__ = [
     "list_jobs",
     "submit_job",
     "make_job",
+    "make_cronjob",
     "configure",
     "show_job",
     "logs",

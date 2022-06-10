@@ -36,6 +36,21 @@ def test_env(env):
         kubernetes.client.V1EnvVar(name="KEY2", value="VALUE2"),
     ]
 
+    cronjobin = kbatch.CronJob(
+        name="name",
+        command=["ls -lh"],
+        image="alpine",
+        env=env,
+        schedule="*/10 * * * *",
+    )
+
+    cronjob = kbatch.make_cronjob(cronjobin)
+    container = cronjob.spec.job_template.spec.template.spec.containers[0]
+    assert container.env == [
+        kubernetes.client.V1EnvVar(name="KEY1", value="VALUE1"),
+        kubernetes.client.V1EnvVar(name="KEY2", value="VALUE2"),
+    ]
+
 
 def test_command_args():
     model_job = kbatch.Job(
@@ -47,6 +62,19 @@ def test_command_args():
     job = kbatch.make_job(model_job)
 
     job_container = job.spec.template.spec.containers[0]
+    assert job_container.args == ["-c", "python"]
+    assert job_container.command == ["/bin/sh"]
+
+    model_cronjob = kbatch.CronJob(
+        name="name",
+        command=["/bin/sh"],
+        args=["-c", "python"],
+        image="alpine",
+        schedule="*/10 * * * *",
+    )
+    cronjob = kbatch.make_cronjob(model_cronjob)
+
+    job_container = cronjob.spec.job_template.spec.template.spec.containers[0]
     assert job_container.args == ["-c", "python"]
     assert job_container.command == ["/bin/sh"]
 
@@ -206,5 +234,44 @@ def test_submit_job(respx_mock: respx.MockRouter):
 
     result = kbatch.submit_job(
         job, code=__file__, kbatch_url="http://kbatch.com/", token="abc"
+    )
+    assert result
+
+
+def test_submit_cronjob(respx_mock: respx.MockRouter):
+    respx_mock.post("http://kbatch.com/cronjobs/").mock(
+        return_value=httpx.Response(200, json={"mock": "response"})
+    )
+
+    cronjob = kbatch.CronJob(
+        name="name",
+        command=["/bin/sh"],
+        args=["-c", "python"],
+        image="alpine",
+        schedule="*/10 * * * *",
+    )
+
+    result = kbatch.submit_job(
+        cronjob,
+        kbatch_url="http://kbatch.com/",
+        token="abc",
+        model=kubernetes.client.V1CronJob,
+    )
+    assert result
+
+    cronjob = kbatch.CronJob(
+        name="name",
+        command=["/bin/sh"],
+        args=["-c", "python"],
+        image="alpine",
+        schedule="*/10 * * * *",
+    )
+
+    result = kbatch.submit_job(
+        cronjob,
+        code=__file__,
+        kbatch_url="http://kbatch.com/",
+        token="abc",
+        model=kubernetes.client.V1CronJob,
     )
     assert result

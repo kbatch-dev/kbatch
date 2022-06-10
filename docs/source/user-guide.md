@@ -51,6 +51,44 @@ $ kbatch job show list-files-jfprp
 
 With `kbatch job logs` you can get the logs for a job. Make sure to pass the container id.
 
+## Submit a cronjob
+
+If you'd like your job to run on a repeating schedule, you can leverage CronJobs. The command line interface for `kbatch cronjob` is same as `kbatch job` with the added requirement that you specify a schedule when you `submit` a cronjob:
+
+```{code-block} console
+$ kbatch cronjob submit \
+    --name=list-files \
+    --image=alpine \
+    --command='["ls", "-lh"]'
+    --schedule='0 22 * * 1-5'
+```
+
+This job will now run at 22:00 on every day-of-week from Monday through Friday **indefinitely**.
+
+You can list schedule cronjobs:
+
+```
+$ kbatch cronjob list -o table
+┏━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┓
+┃ cronjob name          ┃ started                   ┃ schedule     ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━┩
+│ mycj-cron-kb7d6       │ 2022-05-31T05:27:25+00:00 │ */5 * * * *  │
+│ list-files-cron-56whl │ 2022-06-01T23:35:20+00:00 │ 0 22 * * 1-5 │
+└───────────────────────┴───────────────────────────┴──────────────┘
+```
+
+
+The only way to remove a cronjob is to explicitly delete it:
+
+```
+kbatch cronjob delete mycj-cron-kb7d6
+```
+
+### Schedule syntax
+
+For those familiar with Linux cron jobs, the schedule syntax is the same. For those unfamiliar, have a read through the [Kubernetes CronJob - cron schedule syntax](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/#cron-schedule-syntax). The website [crontab.guru](https://crontab.guru/#0_22_*_*_1-5) is a nifty tool that tries to translate the schedule syntax into "plain" English.
+
+
 ## Submitting code files
 
 Your job likely relies on some local code files to function. Perhaps this is a notebook, shell script, or utility library that wouldn't be present in your container image. You can use the `-c` or `--code` option to provide a single file or list of files that will be made available before your job starts running.

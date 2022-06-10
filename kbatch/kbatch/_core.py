@@ -9,8 +9,9 @@ from typing import Optional, Dict, Union
 import rich.table
 import httpx
 import urllib.parse
+import yaml
+from kubernetes.client.models import V1CronJob, V1Job
 
-from ._types import Job
 from ._backend import make_configmap
 
 
@@ -76,7 +77,14 @@ def configure(kbatch_url=None, token=None) -> Path:
     return configpath
 
 
-def _do_job(job_name, kbatch_url, token, method: str):
+def _request_action(
+    kbatch_url: str,
+    token: Optional[str],
+    method: str,
+    model: Union[V1Job, V1CronJob],
+    resource_name: str = None,
+    json_data: Optional[dict] = None,
+):
     client = httpx.Client(follow_redirects=True)
     config = load_config()
 
@@ -86,38 +94,80 @@ def _do_job(job_name, kbatch_url, token, method: str):
     headers = {
         "Authorization": f"token {token}",
     }
+
+    http_methods = ["GET", "DELETE", "POST"]
+    if method not in http_methods:
+        raise ValueError(
+            f"Unknown method specified: {method}. "
+            + "Please select from one of the following: {http_methods}."
+        )
+
+    endpoint = "jobs/" if issubclass(model, V1Job) else "cronjobs/"
+
+    if resource_name:
+        endpoint += resource_name
 
     r = client.request(
-        method, urllib.parse.urljoin(kbatch_url, f"jobs/{job_name}"), headers=headers
+        method,
+        urllib.parse.urljoin(kbatch_url, endpoint),
+        headers=headers,
+        json=json_data,
     )
-    r.raise_for_status()
+    try:
+        r.raise_for_status()
+    except Exception:
+        logger.exception(r.json())
+        raise
 
     return r.json()
 
 
-def show_job(job_name, kbatch_url, token):
-    return _do_job(job_name, kbatch_url, token, method="GET")
+def show_job(resource_name, kbatch_url, token, model: Union[V1Job, V1CronJob] = V1Job):
+    return _request_action(kbatch_url, token, "GET", model, resource_name)
 
 
-def delete_job(job_name, kbatch_url, token):
-    return _do_job(job_name, kbatch_url, token, method="DELETE")
+def delete_job(
+    resource_name, kbatch_url, token, model: Union[V1Job, V1CronJob] = V1Job
+):
+    return _request_action(kbatch_url, token, "DELETE", model, resource_name)
 
 
-def list_jobs(kbatch_url, token):
-    client = httpx.Client(follow_redirects=True)
-    config = load_config()
+def list_jobs(kbatch_url, token, model: Union[V1Job, V1CronJob] = V1Job):
+    return _request_action(kbatch_url, token, "GET", model)
 
-    token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
-    kbatch_url = handle_url(kbatch_url, config)
 
-    headers = {
-        "Authorization": f"token {token}",
-    }
+def submit_job(
+    job,
+    kbatch_url,
+    token=None,
+    model: Union[V1Job, V1CronJob] = V1Job,
+    code=None,
+    profile=None,
+):
+    from ._backend import make_job, make_cronjob
 
-    r = client.get(urllib.parse.urljoin(kbatch_url, "jobs/"), headers=headers)
-    r.raise_for_status()
+    profile = profile or {}
 
-    return r.json()
+    if issubclass(model, V1Job):
+        data = make_job(job, profile=profile).to_dict()
+    elif issubclass(model, V1CronJob):
+        data = make_cronjob(job, profile=profile).to_dict()
+    else:
+        raise ValueError(
+            f"Unknown resource specified: {model}. "
+            + "Please select from one of the following: `V1Job` or `V1CronJob`."
+        )
+
+    data = {"job": data}
+
+    if code:
+        cm = make_configmap(code, generate_name=job.name).to_dict()
+        cm["binary_data"]["code"] = base64.b64encode(cm["binary_data"]["code"]).decode(
+            "ascii"
+        )
+        data["code"] = cm
+
+    return _request_action(kbatch_url, token, "POST", model, json_data=data)
 
 
 def list_pods(kbatch_url: str, token: Optional[str], job_name: Optional[str] = None):
@@ -185,50 +235,6 @@ def _logs(
         yield r.text
 
 
-def submit_job(
-    job: Job,
-    *,
-    code: Optional[Union[str, Path]] = None,
-    kbatch_url: Optional[str] = None,
-    token: Optional[str] = None,
-    profile: Optional[dict] = None,
-):
-    from ._backend import make_job
-
-    config = load_config()
-
-    client = httpx.Client(follow_redirects=True)
-    token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
-    kbatch_url = handle_url(kbatch_url, config)
-
-    headers = {
-        "Authorization": f"token {token}",
-    }
-    # data = job.to_kubernetes().to_dict()
-    profile = profile or {}
-    data = make_job(job, profile=profile).to_dict()
-    data = {"job": data}
-    if code:
-        cm = make_configmap(code, generate_name=job.name).to_dict()
-        cm["binary_data"]["code"] = base64.b64encode(cm["binary_data"]["code"]).decode(
-            "ascii"
-        )
-        data["code"] = cm
-
-    r = client.post(
-        urllib.parse.urljoin(kbatch_url, "jobs/"),
-        json=data,
-        headers=headers,
-    )
-    try:
-        r.raise_for_status()
-    except Exception:
-        logger.exception(r.json())
-        raise
-
-    return r.json()
-
-
 def status(row):
     if row["status"]["succeeded"]:
         return "[green]done[/green]"
@@ -283,6 +289,23 @@ def format_jobs(data):
     return table
 
 
+def format_cronjobs(data):
+    table = rich.table.Table(title="CronJobs")
+
+    table.add_column("cronjob name", style="bold", no_wrap=True)
+    table.add_column("started")
+    table.add_column("schedule")
+
+    for row in data["items"]:
+        table.add_row(
+            row["metadata"]["name"],
+            row["metadata"]["creation_timestamp"],
+            row["spec"]["schedule"],
+        )
+
+    return table
+
+
 def format_pods(data):
     table = rich.table.Table(title="Pods")
 
@@ -319,3 +342,49 @@ def load_profile(profile_name: str, kbatch_url: str) -> dict:
     profiles = show_profiles(kbatch_url)
     profile = profiles[profile_name]
     return profile
+
+
+def _prep_job_data(
+    file,
+    code,
+    name,
+    description,
+    image,
+    command,
+    args,
+    profile,
+    kbatch_url,
+    env,
+):
+    if command:
+        command = json.loads(command)
+    if args:
+        args = json.loads(args)
+
+    data = {}
+
+    if file:
+        data = yaml.safe_load(Path(file).read_text())
+
+    data_profile = data.pop("profile", None)
+    profile = profile or data_profile or {}
+
+    if name is not None:
+        data["name"] = name
+    if description is not None:
+        data["description"] = description
+    if image is not None:
+        data["image"] = image
+    if args is not None:
+        data["args"] = args
+    if command is not None:
+        data["command"] = command
+    if env:
+        env = json.loads(env)
+        data["env"] = env
+
+    code = code or data.pop("code", None)
+    if profile:
+        profile = load_profile(profile, kbatch_url)
+
+    return data

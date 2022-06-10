@@ -13,6 +13,9 @@ from typing import Optional, List, Dict, Union
 from kubernetes.client.models import (
     V1Job,
     V1JobSpec,
+    V1JobTemplateSpec,
+    V1CronJob,
+    V1CronJobSpec,
     V1PodSpec,
     V1PodTemplateSpec,
     V1ObjectMeta,
@@ -28,7 +31,7 @@ from kubernetes.client.models import (
     V1NodeSelectorRequirement,
 )
 
-from ._types import Job
+from ._types import CronJob, Job
 
 SAFE_CHARS = set(string.ascii_lowercase + string.digits)
 
@@ -44,13 +47,12 @@ SAFE_CHARS = set(string.ascii_lowercase + string.digits)
 #         )
 
 
-def make_job(
-    job: Job,
+def _make_job_spec(
+    job: Union[Job, CronJob],
     profile: Optional[dict] = None,
-) -> V1Job:
-    """
-    Make a Kubernetes pod specification for a user-submitted job.
-    """
+    labels: Optional[dict] = None,
+    annotations: Optional[dict] = None,
+):
     profile = profile or {}
     name = job.name  # TODO: deduplicate somehow...
     image = job.image or profile.get("image", None)
@@ -61,18 +63,7 @@ def make_job(
 
     command = job.command
     args = job.args
-
-    # annotations = k8s_config.annotations
-    # labels = k8s_config.labels
     env = job.env
-
-    # annotations = annotations or {}
-    annotations: Dict[str, str] = {}
-    # TODO: set in proxy
-
-    # labels = labels or {}
-    # labels = dict(labels)
-    labels: Dict[str, str] = {}
 
     # file_volume_mount = V1VolumeMount(mount_path="/code", name="file-volume")
     # file_volume = V1Volume(name="file-volume", empty_dir={})
@@ -168,9 +159,40 @@ def make_job(
         metadata=pod_metadata,
     )
 
+    return V1JobSpec(template=template, backoff_limit=0, ttl_seconds_after_finished=300)
+
+
+def _make_job_name(name: str, schedule: str = None):
     generate_name = name
     if not name.endswith("-"):
         generate_name = name + "-"
+    if schedule:
+        generate_name += "cron-"
+    return generate_name
+
+
+def make_cronjob(
+    cronjob: CronJob,
+    profile: Optional[dict] = None,
+) -> V1CronJob:
+    """
+    Make a Kubernetes pod specification for a user-submitted cronjob.
+    """
+    name = cronjob.name
+    schedule = cronjob.schedule
+
+    generate_name = _make_job_name(name, schedule=schedule)
+
+    # annotations = k8s_config.annotations
+    # labels = k8s_config.labels
+    annotations: Dict[str, str] = {}
+    # TODO: set in proxy
+
+    # labels = labels or {}
+    # labels = dict(labels)
+    labels: Dict[str, str] = {}
+
+    job_spec = _make_job_spec(cronjob, profile, labels, annotations)
 
     job_metadata = V1ObjectMeta(
         generate_name=generate_name,
@@ -178,15 +200,57 @@ def make_job(
         labels=labels,
     )
 
-    job = V1Job(
+    job_template = V1JobTemplateSpec(
+        metadata=job_metadata,
+        spec=job_spec,
+    )
+
+    return V1CronJob(
+        api_version="batch/v1",
+        kind="CronJob",
+        metadata=job_metadata,
+        spec=V1CronJobSpec(
+            schedule=cronjob.schedule,
+            job_template=job_template,
+            starting_deadline_seconds=300,
+        ),
+    )
+
+
+def make_job(
+    job: Job,
+    profile: Optional[dict] = None,
+) -> V1Job:
+    """
+    Make a Kubernetes pod specification for a user-submitted job.
+    """
+    name = job.name
+
+    generate_name = _make_job_name(name)
+
+    # annotations = k8s_config.annotations
+    # labels = k8s_config.labels
+    annotations: Dict[str, str] = {}
+    # TODO: set in proxy
+
+    # labels = labels or {}
+    # labels = dict(labels)
+    labels: Dict[str, str] = {}
+
+    job_spec = _make_job_spec(job, profile, labels, annotations)
+
+    job_metadata = V1ObjectMeta(
+        generate_name=generate_name,
+        annotations=annotations,
+        labels=labels,
+    )
+
+    return V1Job(
         api_version="batch/v1",
         kind="Job",
         metadata=job_metadata,
-        spec=V1JobSpec(
-            template=template, backoff_limit=0, ttl_seconds_after_finished=300
-        ),
+        spec=job_spec,
     )
-    return job
 
 
 def make_configmap(code: Union[str, pathlib.Path], generate_name) -> V1ConfigMap:

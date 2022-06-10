@@ -1,14 +1,12 @@
-import json
 import logging
-from pathlib import Path
 
 import click
 import rich
 import rich.logging
-import yaml
+from kubernetes.client.models import V1Job, V1CronJob
 
 from . import _core
-from ._types import Job
+from ._types import CronJob, Job
 
 
 FORMAT = "%(message)s"
@@ -35,29 +33,167 @@ def configure(kbatch_url, token):
     rich.print(f"[green]Wrote config to[/green] [bold]{str(p)}[/bold]")
 
 
+@cli.command()
+@click.option("--kbatch-url", help="URL to the kbatch server.")
+def profiles(kbatch_url):
+    """
+    Show the profiles used by the server.
+
+    kbatch administrators can serve profiles at the "/profiles" endpoint with
+    some configuration values for various profiles.
+    """
+    p = _core.show_profiles(kbatch_url)
+    rich.print_json(data=p)
+
+
+# CRONJOB
+@cli.group()
+def cronjob():
+    """Manage kbatch cronjobs."""
+    pass
+
+
+@cronjob.command(name="show")
+@click.option("--kbatch-url", help="URL to the kbatch server.")
+@click.option("--token", help="File to execute.")
+@click.argument("cronjob_name")
+def show_cronjob(cronjob_name, kbatch_url, token):
+    """Show the details for a cronjob."""
+    result = _core.show_job(cronjob_name, kbatch_url, token, V1CronJob)
+    rich.print_json(data=result)
+
+
+@cronjob.command(name="delete")
+@click.option("--kbatch-url", help="URL to the kbatch server.")
+@click.option("--token", help="File to execute.")
+@click.argument("cronjob_name")
+def delete_cronjob(cronjob_name, kbatch_url, token):
+    """Delete a cronjob, cancelling running jobs and pods."""
+    result = _core.delete_job(cronjob_name, kbatch_url, token, V1CronJob)
+    rich.print_json(data=result)
+
+
+@cronjob.command(name="list")
+@click.option("--kbatch-url", help="URL to the kbatch server.")
+@click.option("--token", help="File to execute.")
+@click.option(
+    "-o",
+    "--output",
+    help="output format",
+    type=click.Choice(["json", "table"]),
+    default="json",
+)
+def list_cronjobs(kbatch_url, token, output):
+    """List all the cronjobs."""
+    results = _core.list_jobs(kbatch_url, token, V1CronJob)
+
+    if output == "json":
+        rich.print_json(data=results)
+    elif output == "table":
+        rich.print(_core.format_cronjobs(results))
+
+
+@cronjob.command(name="submit")
+@click.option("-n", "--name", help="CronJob name.", required=True)
+@click.option("--image", help="Container image to use to execute job.")
+@click.option("--command", help="Command to execute.")
+@click.option("--args", help="Arguments to pass to the command.")
+@click.option(
+    "--schedule", help="The schedule this cronjob should run on.", required=True
+)
+@click.option("-e", "--env", help="JSON mapping of environment variables for the job.")
+@click.option("-d", "--description", help="A description of the cronjob, optional.")
+@click.option(
+    "-c",
+    "--code",
+    help="Local file or directory of source code to make available to the cronjob.",
+)
+@click.option("-p", "--profile", help="Profile name to use. See 'kbatch profiles'.")
+@click.option("-f", "--file", help="Configuration file.")
+@click.option("--kbatch-url", help="URL to the kbatch server.")
+@click.option("--token", help="JupyterHub API token.")
+@click.option(
+    "-o",
+    "--output",
+    default="json",
+    help="Output format.",
+    type=click.Choice(["json", "name"]),
+)
+def submit_cronjob(
+    file,
+    code,
+    name,
+    description,
+    image,
+    command,
+    args,
+    schedule,
+    profile,
+    kbatch_url,
+    token,
+    env,
+    output,
+):
+    """
+    Submit a CronJob to run on Kubernetes.
+    """
+
+    data = _core._prep_job_data(
+        file,
+        code,
+        name,
+        description,
+        image,
+        command,
+        args,
+        profile,
+        kbatch_url,
+        env,
+    )
+
+    if schedule is not None:
+        data["schedule"] = schedule
+
+    cronjob = CronJob(**data)
+
+    result = _core.submit_job(
+        job=cronjob,
+        kbatch_url=kbatch_url,
+        token=token,
+        model=V1CronJob,
+        code=code,
+        profile=profile,
+    )
+    if output == "json":
+        rich.print_json(data=result)
+    elif output == "name":
+        print(result["metadata"]["name"])
+
+
+# JOB
 @cli.group()
 def job():
     """Manage kbatch jobs."""
     pass
 
 
-@job.command()
+@job.command(name="show")
 @click.option("--kbatch-url", help="URL to the kbatch server.")
 @click.option("--token", help="File to execute.")
 @click.argument("job_name")
-def show(job_name, kbatch_url, token):
+def show_job(job_name, kbatch_url, token):
     """Show the details for a job."""
-    result = _core.show_job(job_name, kbatch_url, token)
+    result = _core.show_job(job_name, kbatch_url, token, V1Job)
     rich.print_json(data=result)
 
 
-@job.command()
+@job.command(name="delete")
 @click.option("--kbatch-url", help="URL to the kbatch server.")
 @click.option("--token", help="File to execute.")
 @click.argument("job_name")
-def delete(job_name, kbatch_url, token):
+def delete_job(job_name, kbatch_url, token):
     """Delete a job, cancelling running pods."""
-    result = _core.delete_job(job_name, kbatch_url, token)
+    result = _core.delete_job(job_name, kbatch_url, token, V1Job)
     rich.print_json(data=result)
 
 
@@ -73,16 +209,16 @@ def delete(job_name, kbatch_url, token):
 )
 def list_jobs(kbatch_url, token, output):
     """List all the jobs."""
-    result = _core.list_jobs(kbatch_url, token)
+    results = _core.list_jobs(kbatch_url, token, V1Job)
 
     if output == "json":
-        rich.print_json(data=result)
+        rich.print_json(data=results)
     elif output == "table":
-        rich.print(_core.format_jobs(result))
+        rich.print(_core.format_jobs(results))
 
 
-@job.command()
-@click.option("-n", "--name", help="Job name.")
+@job.command(name="submit")
+@click.option("-n", "--name", help="Job name.", required=True)
 @click.option("--image", help="Container image to use to execute job.")
 @click.option("--command", help="Command to execute.")
 @click.option("--args", help="Arguments to pass to the command.")
@@ -104,7 +240,7 @@ def list_jobs(kbatch_url, token, output):
     help="Output format.",
     type=click.Choice(["json", "name"]),
 )
-def submit(
+def submit_job(
     file,
     code,
     name,
@@ -121,44 +257,28 @@ def submit(
     """
     Submit a job to run on Kubernetes.
     """
-    if command:
-        command = json.loads(command)
-    if args:
-        args = json.loads(args)
 
-    data = {}
-
-    if file:
-        data = yaml.safe_load(Path(file).read_text())
-
-    data_profile = data.pop("profile", None)
-    profile = profile or data_profile or {}
-
-    if name is not None:
-        data["name"] = name
-    if description is not None:
-        data["description"] = description
-    if image is not None:
-        data["image"] = image
-    if args is not None:
-        data["args"] = args
-    if command is not None:
-        data["command"] = command
-    if env:
-        env = json.loads(env)
-        data["env"] = env
-
-    code = code or data.pop("code", None)
-    if profile:
-        profile = _core.load_profile(profile, kbatch_url)
+    data = _core._prep_job_data(
+        file,
+        code,
+        name,
+        description,
+        image,
+        command,
+        args,
+        profile,
+        kbatch_url,
+        env,
+    )
 
     job = Job(**data)
 
     result = _core.submit_job(
         job,
-        code=code,
         kbatch_url=kbatch_url,
         token=token,
+        model=V1Job,
+        code=code,
         profile=profile,
     )
     if output == "json":
@@ -167,19 +287,7 @@ def submit(
         print(result["metadata"]["name"])
 
 
-@cli.command()
-@click.option("--kbatch-url", help="URL to the kbatch server.")
-def profiles(kbatch_url):
-    """
-    Show the profiles used by the server.
-
-    kbatch administrators can serve profiles at the "/profiles" endpoint with
-    some configuration values for various profiles.
-    """
-    p = _core.show_profiles(kbatch_url)
-    rich.print_json(data=p)
-
-
+# POD
 @cli.group()
 def pod():
     """Manage job pods."""
