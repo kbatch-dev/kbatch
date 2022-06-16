@@ -2,7 +2,7 @@
 
 ## Development setup
 
-Clone the `kbatch` repo onto your local and create a virtual environment (`conda`, `venv`, etc.) with Python 3.9 installed. From this directory, you can pip install the packages needed for development.
+Clone the `kbatch` repo onto your local machine and create a virtual environment (`conda`, `venv`, etc.) with Python 3.9 installed. From this directory, you can pip install the packages needed for development
 
 ```
 $ pip install -e ./kbatch[all]
@@ -12,11 +12,39 @@ $ pip install -e ./kbatch-proxy[all]
 
 > NOTE: The `-e` signifies that this is an "editable install", read more [here](https://pip.pypa.io/en/stable/topics/local-project-installs/#editable-installs).
 
-
-The first pip install command above should also installed `pre-commit` used to format and lint the code. Run the following command to start using `pre-commit`.
+The first pip install command above should've also installed `pre-commit` which is used to format and lint the code. Run the following command to start using `pre-commit`
 
 ```
 $ pre-commit install --install-hooks
+```
+
+### Run `pytest`
+
+To validate your changes against the test suite, run
+
+```
+$ pytest -v ./kbatch
+...
+$ pytest -v ./kbatch-proxy
+```
+
+### Run `mypy`
+
+To perform `mypy` type checking, run
+
+```
+$ mypy ./kbatch
+...
+$ mypy ./kbatch-proxy
+```
+
+### To build the docs locally
+
+To build the docs locally, run
+
+```
+$ cd ./docs
+$ make html
 ```
 
 
