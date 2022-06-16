@@ -59,4 +59,5 @@ For more on how to use `kbatch`, see the [User guide](./user-guide.md)
 user-guide
 examples/index.md
 kbatch-proxy
+dev-guide
 ```

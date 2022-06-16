@@ -1,9 +1,0 @@
-fastapi
-httpx
-kubernetes
-uvicorn[standard]
-gunicorn==20.1.0
-jupyterhub
-escapism
-rich
-pydantic[dotenv]

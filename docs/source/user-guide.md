@@ -59,7 +59,7 @@ If you'd like your job to run on a repeating schedule, you can leverage CronJobs
 $ kbatch cronjob submit \
     --name=list-files \
     --image=alpine \
-    --command='["ls", "-lh"]'
+    --command='["ls", "-lh"]' \
     --schedule='0 22 * * 1-5'
 ```
 

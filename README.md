@@ -9,7 +9,7 @@ This repository contains two packages: [`kbatch`](./kbatch) is for users, [`kbat
 `kbatch` can be installed from source using pip:
 
 ```
-$ pip install "git+https://github.com/kbatch-dev/kbatch/#egg=kbatch&subdirectory=kbatch"
+$ pip install kbatch
 ```
 
 ## Usage
@@ -100,6 +100,23 @@ Show the detail on a given job
 ```
 $ kbatch job show "<job-id>
 ```
+
+### Submit cronjob 
+
+Similar to jobs, cronjobs require `name`, `command` and container `image`. However cronjobs also require a `schedule` which follows the [cron schedule syntax](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/#cron-schedule-syntax).
+
+
+```{code-block} console
+$ kbatch cronjob submit \
+    --name=list-files \
+    --image=alpine \
+    --command='["ls", "-lh"]' \
+    --schedule='0 22 * * 1-5'
+```
+
+This job will now run at 22:00 on every day-of-week from Monday through Friday **indefinitely**.
+
+> NOTE: Given that cronjobs run on a schedule **indefinitely**, the only way to stop them is to manually delete the cronjob. See the [user guide docs](https://kbatch.readthedocs.io/en/latest/user-guide.html#submit-a-cronjob) for more information.
 
 ### Show pod logs
 
