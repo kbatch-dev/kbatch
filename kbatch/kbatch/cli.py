@@ -154,6 +154,7 @@ def submit_cronjob(
     if schedule is not None:
         data["schedule"] = schedule
 
+    code = code or data.pop("code", None)
     cronjob = CronJob(**data)
 
     result = _core.submit_job(
@@ -271,6 +272,7 @@ def submit_job(
         env,
     )
 
+    code = code or data.pop("code", None)
     job = Job(**data)
 
     result = _core.submit_job(

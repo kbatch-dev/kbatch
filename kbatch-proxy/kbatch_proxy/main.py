@@ -7,7 +7,7 @@ from pydantic import BaseModel, BaseSettings
 import jupyterhub.services.auth
 from fastapi import Depends, FastAPI, HTTPException, Request, status, APIRouter
 import kubernetes.client
-from kubernetes.client.models import V1CronJob, V1Job, V1ConfigMap
+from kubernetes.client.models import V1CronJob, V1Job, V1ConfigMap, V1JobTemplateSpec
 import kubernetes.config
 import kubernetes.watch
 import rich.traceback
@@ -327,7 +327,7 @@ def _create_job(
 
     if issubclass(model, V1CronJob):
         j = job_data.get("spec", {}).get("job_template", {})
-        job_to_patch = utils.parse(j, V1Job)
+        job_to_patch = utils.parse(j, V1JobTemplateSpec)
 
     code_data = data.get("code", None)
     if code_data:
@@ -372,13 +372,14 @@ def _create_job(
         config_map = api.create_namespaced_config_map(
             namespace=user.namespace, body=config_map
         )
-        patch.add_submitted_configmap_name(job, config_map)
+        patch.add_submitted_configmap_name(job_to_patch, config_map)
 
     logger.info("Submitting job")
     try:
         if issubclass(model, V1Job):
             resp = batch_api.create_namespaced_job(namespace=user.namespace, body=job)
         elif issubclass(model, V1CronJob):
+            job.spec.job_template = job_to_patch
             resp = batch_api.create_namespaced_cron_job(
                 namespace=user.namespace, body=job
             )

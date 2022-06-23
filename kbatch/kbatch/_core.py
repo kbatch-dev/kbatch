@@ -383,7 +383,6 @@ def _prep_job_data(
         env = json.loads(env)
         data["env"] = env
 
-    code = code or data.pop("code", None)
     if profile:
         profile = load_profile(profile, kbatch_url)
 
