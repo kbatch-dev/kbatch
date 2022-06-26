@@ -5,7 +5,7 @@ import rich
 import rich.logging
 from kubernetes.client.models import V1Job, V1CronJob
 
-from . import _core
+from . import _core, __version__
 from ._types import CronJob, Job
 
 
@@ -19,6 +19,7 @@ logging.basicConfig(
 
 
 @click.group()
+@click.version_option(__version__)
 def cli():
     """kbatch controls batch jobs"""
     pass
@@ -49,7 +50,11 @@ def profiles(kbatch_url):
 # CRONJOB
 @cli.group()
 def cronjob():
-    """Manage kbatch cronjobs."""
+    """Manage kbatch cronjobs.
+
+    WARNING: Cronjobs run on a schedule and will run *indefinitely*!
+    Remember to delete your cronjob when no longer in use!
+    """
     pass
 
 
@@ -94,13 +99,11 @@ def list_cronjobs(kbatch_url, token, output):
 
 
 @cronjob.command(name="submit")
-@click.option("-n", "--name", help="CronJob name.", required=True)
+@click.option("-n", "--name", help="CronJob name.")
 @click.option("--image", help="Container image to use to execute job.")
 @click.option("--command", help="Command to execute.")
 @click.option("--args", help="Arguments to pass to the command.")
-@click.option(
-    "--schedule", help="The schedule this cronjob should run on.", required=True
-)
+@click.option("--schedule", help="The schedule this cronjob should run on.")
 @click.option("-e", "--env", help="JSON mapping of environment variables for the job.")
 @click.option("-d", "--description", help="A description of the cronjob, optional.")
 @click.option(
@@ -219,7 +222,7 @@ def list_jobs(kbatch_url, token, output):
 
 
 @job.command(name="submit")
-@click.option("-n", "--name", help="Job name.", required=True)
+@click.option("-n", "--name", help="Job name.")
 @click.option("--image", help="Container image to use to execute job.")
 @click.option("--command", help="Command to execute.")
 @click.option("--args", help="Arguments to pass to the command.")
