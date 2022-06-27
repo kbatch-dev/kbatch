@@ -8,7 +8,6 @@ from typing import Dict, Optional, Union
 import escapism
 from kubernetes.client.models import (
     V1Job,
-    V1CronJob,
     V1JobTemplateSpec,
     V1ConfigMap,
     V1Container,
@@ -208,7 +207,7 @@ def patch_configmap_owner(
 
     if issubclass(type(job), V1Job):
         kind = "Job"
-    elif issubclass(type(job), V1CronJob):
+    elif issubclass(type(job), V1JobTemplateSpec):
         kind = "CronJob"
 
     config_map.metadata.owner_references = [

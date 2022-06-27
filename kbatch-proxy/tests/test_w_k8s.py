@@ -15,14 +15,15 @@ HERE = pathlib.Path(__file__).parent
 
 def test_create_job():
 
-    user = kbatch_proxy.main.User(name="some_name", groups=[], api_token="xyz")
+    username = "some_name"
+    user = kbatch_proxy.main.User(name=username, groups=[], api_token="xyz")
 
-    file = HERE / "data/incoming-job.json"
+    file = HERE / "data/incoming_job.json"
     with open(file, "r") as fp:
         incoming_job_data = json.load(fp)
 
     job = kbatch_proxy.main._create_job(incoming_job_data, V1Job, user)
 
-    assert job["metadata"]["annotations"]["kbatch.jupyter.org/username"] == "some_name"
+    assert job["metadata"]["annotations"]["kbatch.jupyter.org/username"] == username
     # test that `code` input has been added to the job
     assert job["spec"]["template"]["spec"]["init_containers"]
