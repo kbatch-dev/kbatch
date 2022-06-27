@@ -206,7 +206,6 @@ def patch_configmap_owner(
         raise ValueError("job must have a name before it can be set as an owner")
     assert job.metadata.name is not None
 
-    # TODO: validate that this function works for both job + cronjob
     if issubclass(type(job), V1Job):
         kind = "Job"
     elif issubclass(type(job), V1CronJob):
