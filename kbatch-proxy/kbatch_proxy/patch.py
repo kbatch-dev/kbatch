@@ -205,10 +205,15 @@ def patch_configmap_owner(
         raise ValueError("job must have a name before it can be set as an owner")
     assert job.metadata.name is not None
 
+    if issubclass(type(job), V1Job):
+        kind = "Job"
+    elif issubclass(type(job), V1JobTemplateSpec):
+        kind = "CronJob"
+
     config_map.metadata.owner_references = [
         V1OwnerReference(
             api_version="batch/v1",
-            kind="Job",
+            kind=kind,
             name=job.metadata.name,
             uid=job.metadata.uid,
         )

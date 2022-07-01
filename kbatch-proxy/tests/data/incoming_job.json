@@ -1,0 +1,53 @@
+{
+    "job": {
+        "api_version": "batch/v1",
+        "kind": "Job",
+        "metadata": {
+            "annotations": {},
+            "generate_name": "nb-job-",
+            "labels": {},
+            "namespace": null
+            
+        },
+        "spec": {
+            "template": {
+                "metadata": {
+                    "annotations": {},
+                    "labels": {},
+                    "name": "nb-job-pod",
+                    "namespace": null
+                },
+                "spec": {
+                    "containers": [
+                        {
+                            "args": [
+                                "papermill",
+                                "kbatch_nb.ipynb"
+                            ],
+                            "image": "mcr.microsoft.com/planetary-computer/python:latest",
+                            "name": "job",
+                            "working_dir": "/code"
+                        }
+                    ],
+                    "restart_policy": "Never"
+                }
+            },
+            "ttl_seconds_after_finished": 300
+        },
+        "status": null
+    },
+    "code": {
+        "api_version": "v1",
+        "binary_data": {
+            "code": "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"
+        },
+        "data": null,
+        "immutable": null,
+        "kind": "ConfigMap",
+        "metadata": {
+            "annotations": null,
+            "generate_name": "nb-job",
+            "labels": null
+        }
+    }
+}

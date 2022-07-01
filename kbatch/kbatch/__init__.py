@@ -19,6 +19,7 @@ __version__ = "0.4.0"
 __all__ = [
     "__version__",
     "Job",
+    "CronJob",
     "list_jobs",
     "submit_job",
     "make_job",
