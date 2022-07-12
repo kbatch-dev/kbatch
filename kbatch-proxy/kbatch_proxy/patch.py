@@ -199,9 +199,7 @@ def add_submitted_configmap_name(
     job.spec.template.spec.volumes[-2].config_map.name = config_map.metadata.name
 
 
-def patch_configmap_owner(
-    job: Union[V1Job, V1CronJob], config_map: V1ConfigMap
-):
+def patch_configmap_owner(job: Union[V1Job, V1CronJob], config_map: V1ConfigMap):
     if job.metadata.name is None:
         raise ValueError("job must have a name before it can be set as an owner")
     assert job.metadata.name is not None
