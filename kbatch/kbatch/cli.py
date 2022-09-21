@@ -153,6 +153,7 @@ def submit_cronjob(
         kbatch_url,
         env,
     )
+    profile = data.pop('profile', profile)
 
     if schedule is not None:
         data["schedule"] = schedule
