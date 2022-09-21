@@ -384,6 +384,9 @@ def _prep_job_data(
         data["env"] = env
 
     if profile:
+        if kbatch_url is None:
+            kbatch_url = data["kbatch_url"]
         profile = load_profile(profile, kbatch_url)
+        data["profile"] = profile
 
     return data
