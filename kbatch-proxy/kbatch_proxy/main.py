@@ -132,7 +132,7 @@ async def get_current_user(request: Request) -> User:
         user = None
 
     if user:
-        return User(**user, api_token=token, authenticated=True)
+        return User(**user, api_token=token)
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
