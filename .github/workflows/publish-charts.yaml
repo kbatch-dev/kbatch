@@ -1,6 +1,3 @@
-# This is a GitHub workflow defining a set of jobs with a set of steps. ref:
-# https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions
-#
 # This workflow package and publishes the Helm charts to Helm repository living
 # inside the gh-pages branch of this git repository.
 #
@@ -25,7 +22,6 @@ jobs:
 
       - name: Get the version
         id: get_version
-        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
         run: |
           echo "VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
 
