@@ -162,7 +162,7 @@ def _make_job_spec(
     return V1JobSpec(template=template, backoff_limit=0, ttl_seconds_after_finished=300)
 
 
-def _make_job_name(name: str, schedule: str = None):
+def _make_job_name(name: str, schedule: Union[str, None] = None):
     generate_name = name
     if not name.endswith("-"):
         generate_name = name + "-"

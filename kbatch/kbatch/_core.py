@@ -82,7 +82,7 @@ def _request_action(
     token: Optional[str],
     method: str,
     model: Union[V1Job, V1CronJob],
-    resource_name: str = None,
+    resource_name: Union[str, None] = None,
     json_data: Optional[dict] = None,
 ):
     client = httpx.Client(follow_redirects=True)

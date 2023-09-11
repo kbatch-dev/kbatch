@@ -6,4 +6,4 @@ gunicorn==20.1.0
 jupyterhub
 escapism
 rich
-pydantic[dotenv]
+pydantic[dotenv]<2.0.0
