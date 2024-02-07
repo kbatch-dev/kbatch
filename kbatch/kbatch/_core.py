@@ -386,4 +386,4 @@ def _prep_job_data(
     if profile:
         profile = load_profile(profile, kbatch_url)
 
-    return data
+    return data, profile
