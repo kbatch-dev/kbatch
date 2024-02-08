@@ -141,7 +141,7 @@ def submit_cronjob(
     Submit a CronJob to run on Kubernetes.
     """
 
-    data = _core._prep_job_data(
+    data, profile = _core._prep_job_data(
         file,
         code,
         name,
@@ -262,7 +262,7 @@ def submit_job(
     Submit a job to run on Kubernetes.
     """
 
-    data = _core._prep_job_data(
+    data, profile = _core._prep_job_data(
         file,
         code,
         name,
