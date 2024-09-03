@@ -1,6 +1,7 @@
 """
 Patch a V1Job.
 """
+
 import re
 import string
 from typing import Dict, Optional, Union
