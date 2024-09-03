@@ -1,6 +1,7 @@
 """
 Start a cluster with Dask Gateway, print the dashboard link, and run some tasks.
 """
+
 import dask_gateway
 from distributed import wait
 

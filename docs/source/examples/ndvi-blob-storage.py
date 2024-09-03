@@ -1,6 +1,7 @@
 """
 Compute NDVI for the latest Sentinel-2 image, saving to Blob Storage.
 """
+
 import io
 import os
 import pystac_client
