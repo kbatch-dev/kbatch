@@ -3,7 +3,8 @@ import logging
 from typing import List, Optional, Tuple, Dict, Union
 
 import yaml
-from pydantic import BaseModel, BaseSettings
+from pydantic import BaseModel
+from pydantic_settings import BaseSettings, SettingsConfigDict
 import jupyterhub.services.auth
 from fastapi import Depends, FastAPI, HTTPException, Request, status, APIRouter
 import kubernetes.client
@@ -49,15 +50,16 @@ class Settings(BaseSettings):
     # Whether to automatically create new namespaces for a users
     kbatch_create_user_namespace: bool = True
 
-    class Config:
-        env_file = os.environ.get("KBATCH_SETTINGS_PATH", ".env")
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(
+        env_file=os.environ.get("KBATCH_SETTINGS_PATH", ".env"),
+        env_file_encoding="utf-8",
+    )
 
 
 class User(BaseModel):
     name: str
     groups: List[str]
-    api_token: Optional[str]
+    api_token: Optional[str] = None
 
     @property
     def namespace(self) -> str:
@@ -254,7 +256,7 @@ def get_root():
 
 @router.get("/authorized")
 def authorized(user: User = Depends(get_current_user)) -> UserOut:
-    return UserOut(**user.dict())
+    return UserOut(**user.model_dump())
 
 
 app.include_router(router)
