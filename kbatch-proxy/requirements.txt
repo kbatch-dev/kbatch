@@ -2,8 +2,9 @@ fastapi
 httpx
 kubernetes
 uvicorn[standard]
-gunicorn==20.1.0
+gunicorn==23.0.0
 jupyterhub
 escapism
 rich
-pydantic[dotenv]<2.0.0
+pydantic>=2,<3
+pydantic-settings
