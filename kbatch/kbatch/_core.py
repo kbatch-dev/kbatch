@@ -116,7 +116,7 @@ def _request_action(
     try:
         r.raise_for_status()
     except Exception:
-        logger.exception(r.json())
+        logger.exception(r.text)
         raise
 
     return r.json()
