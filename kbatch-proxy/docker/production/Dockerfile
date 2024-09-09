@@ -1,9 +1,9 @@
-FROM python:3.9
+FROM python:3.12-slim
 
 WORKDIR /code
 
 COPY ./requirements.txt /code/requirements.txt
-RUN pip install --no-cache-dir --upgrade -r requirements.txt
+RUN pip install --no-cache-dir --upgrade --only-binary :all: -r requirements.txt
 COPY ./docker/production/gunicorn_conf.py /code/
 COPY ./kbatch_proxy /code/kbatch_proxy
 
