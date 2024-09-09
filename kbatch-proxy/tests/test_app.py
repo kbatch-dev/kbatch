@@ -1,3 +1,4 @@
+import os
 import sys
 import pytest
 import pathlib
@@ -15,9 +16,20 @@ HERE = pathlib.Path(__file__).parent
 def mock_hub_auth(mocker):
     def side_effect(token):
         if token == "abc":
-            return {"name": "testuser", "groups": ["testgroup"]}
+            return {
+                "name": "testuser",
+                "groups": ["testgroup"],
+                "scopes": ["access:services"],
+            }
+        elif token == "def":
+            return {
+                "name": "testuser2",
+                "groups": [],
+                "scopes": ["access:servers!user=testuser2"],
+            }
 
     mocker.patch("kbatch_proxy.main.auth.user_for_token", side_effect=side_effect)
+    mocker.patch.dict(os.environ, {"JUPYTERHUB_SERVICE_NAME": "kbatch"})
 
 
 def test_read_main():
@@ -34,8 +46,13 @@ def test_authorized():
     response = client.get("/authorized", headers={"Authorization": "Token not-a-token"})
     assert response.status_code == 401
 
-    response = client.get("/authorized", headers={"Authorization": "Token abc"})
+    response = client.get("/authorized", headers={"Authorization": "token abc"})
     assert response.status_code == 200
+    response = client.get("/authorized", headers={"Authorization": "Bearer abc"})
+    assert response.status_code == 200
+
+    response = client.get("/authorized", headers={"Authorization": "Bearer def"})
+    assert response.status_code == 403
 
 
 def test_loads_profile():
