@@ -9,6 +9,7 @@ from typing import Dict, Optional, Union
 import escapism
 from kubernetes.client.models import (
     V1Job,
+    V1CronJob,
     V1JobTemplateSpec,
     V1ConfigMap,
     V1Container,
@@ -199,22 +200,15 @@ def add_submitted_configmap_name(
     job.spec.template.spec.volumes[-2].config_map.name = config_map.metadata.name
 
 
-def patch_configmap_owner(
-    job: Union[V1Job, V1JobTemplateSpec], config_map: V1ConfigMap
-):
+def patch_configmap_owner(job: Union[V1Job, V1CronJob], config_map: V1ConfigMap):
     if job.metadata.name is None:
         raise ValueError("job must have a name before it can be set as an owner")
     assert job.metadata.name is not None
 
-    if issubclass(type(job), V1Job):
-        kind = "Job"
-    elif issubclass(type(job), V1JobTemplateSpec):
-        kind = "CronJob"
-
     config_map.metadata.owner_references = [
         V1OwnerReference(
             api_version="batch/v1",
-            kind=kind,
+            kind=job.kind,
             name=job.metadata.name,
             uid=job.metadata.uid,
         )
