@@ -111,7 +111,7 @@ router = APIRouter(prefix=settings.kbatch_prefix)
 
 
 # ----------------------------------------------------------------------------
-# Jupyterhub configuration
+# JupyterHub configuration
 # TODO: make auth pluggable
 
 auth = jupyterhub.services.auth.HubAuth(
@@ -121,17 +121,29 @@ auth = jupyterhub.services.auth.HubAuth(
 
 
 async def get_current_user(request: Request) -> User:
-    # cookie = request.cookies.get(auth.cookie_name)
-    cookie = None  # TODO: jupyterhub 2.0 compat
-    token = request.headers.get(auth.auth_header_name)
-
-    if cookie:
-        user = auth.user_for_cookie(cookie)
-    elif token:
-        token = token.removeprefix("token ").removeprefix("Token ")
+    if not auth.access_scopes:
+        raise RuntimeError(
+            "JupyterHub OAuth scopes for access to kbatch not defined. "
+            "Set $JUPYTERHUB_OAUTH_ACCESS_SCOPES and/or $JUPYTERHUB_SERVICE_NAME."
+        )
+    user = None
+    auth_header = request.headers.get(auth.auth_header_name)
+    if auth_header:
+        scheme, *rest = auth_header.split(None, 1)
+        token = ""
+        if scheme.lower() in {"bearer", "token"} and rest:
+            token = rest[0]
         user = auth.user_for_token(token)
-    else:
-        user = None
+        if user and not auth.check_scopes(auth.access_scopes, user):
+            msg = (
+                "Not allowing request with scopes:"
+                f" {user['scopes']}. Needs scope(s): {auth.access_scopes}"
+            )
+            logger.warning(f"{msg} (user={user['name']})")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=msg,
+            )
 
     if user:
         return User(**user, api_token=token)
