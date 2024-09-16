@@ -78,7 +78,7 @@ def configure(kbatch_url=None, token=None) -> Path:
 
 
 def _request_action(
-    kbatch_url: str,
+    kbatch_url: str | None,
     token: Optional[str],
     method: str,
     model: Union[V1Job, V1CronJob],
@@ -122,24 +122,36 @@ def _request_action(
     return r.json()
 
 
-def show_job(resource_name, kbatch_url, token, model: Union[V1Job, V1CronJob] = V1Job):
+def show_job(
+    resource_name,
+    kbatch_url: str | None = None,
+    token: str | None = None,
+    model: Union[V1Job, V1CronJob] = V1Job,
+):
     return _request_action(kbatch_url, token, "GET", model, resource_name)
 
 
 def delete_job(
-    resource_name, kbatch_url, token, model: Union[V1Job, V1CronJob] = V1Job
+    resource_name,
+    kbatch_url: str | None = None,
+    token: str | None = None,
+    model: Union[V1Job, V1CronJob] = V1Job,
 ):
     return _request_action(kbatch_url, token, "DELETE", model, resource_name)
 
 
-def list_jobs(kbatch_url, token, model: Union[V1Job, V1CronJob] = V1Job):
+def list_jobs(
+    kbatch_url: str | None = None,
+    token: str | None = None,
+    model: Union[V1Job, V1CronJob] = V1Job,
+):
     return _request_action(kbatch_url, token, "GET", model)
 
 
 def submit_job(
     job,
-    kbatch_url,
-    token=None,
+    kbatch_url: str | None = None,
+    token: str | None = None,
     model: Union[V1Job, V1CronJob] = V1Job,
     code=None,
     profile=None,
@@ -170,7 +182,11 @@ def submit_job(
     return _request_action(kbatch_url, token, "POST", model, json_data=data)
 
 
-def list_pods(kbatch_url: str, token: Optional[str], job_name: Optional[str] = None):
+def list_pods(
+    kbatch_url: str | None = None,
+    token: str | None = None,
+    job_name: Optional[str] = None,
+):
     client = httpx.Client(follow_redirects=True)
     config = load_config()
 
@@ -191,13 +207,23 @@ def list_pods(kbatch_url: str, token: Optional[str], job_name: Optional[str] = N
     return r.json()
 
 
-def logs(pod_name, kbatch_url, token, read_timeout: int = 60):
+def logs(
+    pod_name,
+    kbatch_url: str | None = None,
+    token: str | None = None,
+    read_timeout: int = 60,
+):
     gen = _logs(pod_name, kbatch_url, token, stream=False, read_timeout=read_timeout)
     result = next(gen)
     return result
 
 
-def logs_streaming(pod_name, kbatch_url, token, read_timeout: int = 60):
+def logs_streaming(
+    pod_name,
+    kbatch_url: str | None = None,
+    token: str | None = None,
+    read_timeout: int = 60,
+):
     return _logs(pod_name, kbatch_url, token, stream=True, read_timeout=read_timeout)
 
 
@@ -325,7 +351,7 @@ def format_pods(data):
     return table
 
 
-def show_profiles(kbatch_url):
+def show_profiles(kbatch_url: str | None = None):
     client = httpx.Client(follow_redirects=True)
     config = load_config()
 
@@ -338,7 +364,7 @@ def show_profiles(kbatch_url):
     return r.json()
 
 
-def load_profile(profile_name: str, kbatch_url: str) -> dict:
+def load_profile(profile_name: str, kbatch_url: str | None = None) -> dict:
     profiles = show_profiles(kbatch_url)
     profile = profiles[profile_name]
     return profile
