@@ -28,4 +28,6 @@ __all__ = [
     "configure",
     "show_job",
     "logs",
+    "list_pods",
+    "logs_streaming",
 ]
