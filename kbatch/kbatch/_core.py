@@ -30,11 +30,25 @@ def config_path() -> Path:
 
 
 def load_config() -> Dict[str, Optional[str]]:
+    """Load the configuration
+
+    "kbatch_url" and "token" will always be defined,
+    but may be None.
+
+    config file takes precedence, but if not defined,
+    $KBATCH_URL and $JUPYTERHUB_API_TOKEN will be loaded from the environment.
+    """
+
     p = config_path()
     config: Dict[str, Optional[str]] = {"token": None, "kbatch_url": None}
     if p.exists():
         with open(config_path()) as f:
-            config = json.load(f)
+            config.update(json.load(f))
+    if config["kbatch_url"] is None and os.getenv("KBATCH_URL"):
+        config["kbatch_url"] = os.environ["KBATCH_URL"]
+    if config["token"] is None and os.getenv("JUPYTERHUB_API_TOKEN"):
+        config["token"] = os.environ["JUPYTERHUB_API_TOKEN"]
+
     return config
 
 
@@ -46,7 +60,7 @@ def handle_url(kbatch_url: Optional[str], config: Dict[str, Optional[str]]) -> s
     2. The environment variable
     3. The value from the config
     """
-    kbatch_url = kbatch_url or os.environ.get("KBATCH_URL") or config["kbatch_url"]
+    kbatch_url = kbatch_url or config["kbatch_url"]
     if not kbatch_url:
         raise ValueError(
             "Must specify 'kbatch_url' or set the 'KBATCH_URL' environment variable."
@@ -92,7 +106,7 @@ def _request_action(
     client = httpx.Client(follow_redirects=True)
     config = load_config()
 
-    token = token or config["token"] or os.environ.get("JUPYTERHUB_API_TOKEN")
+    token = token or config["token"]
     kbatch_url = handle_url(kbatch_url, config)
 
     headers = {
@@ -194,7 +208,7 @@ def list_pods(
     client = httpx.Client(follow_redirects=True)
     config = load_config()
 
-    token = token or config["token"] or os.environ.get("JUPYTERHUB_API_TOKEN")
+    token = token or config["token"]
     kbatch_url = handle_url(kbatch_url, config)
 
     headers = {
@@ -238,7 +252,7 @@ def _logs(
     client = httpx.Client(
         follow_redirects=True, timeout=httpx.Timeout(5, read=read_timeout)
     )
-    token = token or config["token"] or os.environ.get("JUPYTERHUB_API_TOKEN")
+    token = token or config["token"]
     kbatch_url = handle_url(kbatch_url, config)
 
     headers = {

@@ -2,6 +2,7 @@ import json
 import contextlib
 import io
 import os
+import re
 import pathlib
 import zipfile
 
@@ -124,7 +125,7 @@ def test_handle_url():
 
     with tmp_env("KBATCH_URL", "http://kbatch-env.com/"):
         result = kbatch._core.handle_url(None, config)
-        assert result == "http://kbatch-env.com/"
+        assert result == "http://kbatch-config.com/"
 
         result = kbatch._core.handle_url("http://kbatch.com/", config)
         assert result == "http://kbatch.com/"
@@ -140,20 +141,57 @@ def test_handle_url():
 
 
 def test_configure(respx_mock: respx.MockRouter, tmp_path: pathlib.Path):
-    respx_mock.get("http://kbatch.com/authorized").mock(
+    respx_mock.get(re.compile(r"http://(.+)/authorized")).mock(
         return_value=httpx.Response(200)
     )
 
-    expected = tmp_path / "kbatch/config.json"
+    config_path = tmp_path / "kbatch/config.json"
     with tmp_env("XDG_CONFIG_HOME", str(tmp_path)):
         result = kbatch._core.config_path()
-        assert result == expected
+        assert result == config_path
 
         result = kbatch._core.configure(kbatch_url="http://kbatch.com", token="abc")
-        assert result == expected
+        assert result == config_path
 
-    config = json.loads(expected.read_text())
-    assert config == {"token": "abc", "kbatch_url": "http://kbatch.com/"}
+        config = json.loads(config_path.read_text())
+        assert config == {"token": "abc", "kbatch_url": "http://kbatch.com/"}
+
+        with tmp_env("JUPYTERHUB_API_TOKEN", "env"):
+            kbatch._core.configure(kbatch_url="http://token.local/")
+            config = json.loads(config_path.read_text())
+            # token from env not persisted
+            assert config == {"kbatch_url": "http://token.local/", "token": None}
+            loaded_config = kbatch._core.load_config()
+            # env loaded
+            assert loaded_config == {
+                "kbatch_url": "http://token.local/",
+                "token": "env",
+            }
+
+            # token persisted, config preferred over env
+            kbatch._core.configure(kbatch_url="http://token.local/", token="config")
+            config = json.loads(config_path.read_text())
+            assert config == {"kbatch_url": "http://token.local/", "token": "config"}
+            loaded_config = kbatch._core.load_config()
+            assert loaded_config == config
+
+            # clear config, set $KBATCH_URL
+            config_path.unlink()
+            with tmp_env("KBATCH_URL", "http://kbatch-env.local/"):
+                loaded_config = kbatch._core.load_config()
+                assert loaded_config == {
+                    "kbatch_url": "http://kbatch-env.local/",
+                    "token": "env",
+                }
+                kbatch._core.configure(
+                    kbatch_url="http://kbatch-config.local/", token="config"
+                )
+
+                loaded_config = kbatch._core.load_config()
+                assert loaded_config == {
+                    "kbatch_url": "http://kbatch-config.local/",
+                    "token": "config",
+                }
 
 
 def test_show_job(respx_mock: respx.MockRouter):
