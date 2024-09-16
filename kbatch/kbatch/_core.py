@@ -56,12 +56,14 @@ def handle_url(kbatch_url: Optional[str], config: Dict[str, Optional[str]]) -> s
 
 
 def configure(kbatch_url=None, token=None) -> Path:
-    token = token or os.environ.get("JUPYTERHUB_API_TOKEN")
+    test_token = token or os.environ.get("JUPYTERHUB_API_TOKEN")
+    if test_token is None:
+        raise ValueError("Specify --token or set $JUPYTERHUB_API_TOKEN env")
     kbatch_url = handle_url(kbatch_url, config={"kbatch_url": None})
 
     client = httpx.Client(follow_redirects=True)
 
-    headers = {"Authorization": f"token {token}"}
+    headers = {"Authorization": f"token {test_token}"}
     # verify that things are OK
     # TODO: flexible URL
 
@@ -88,7 +90,7 @@ def _request_action(
     client = httpx.Client(follow_redirects=True)
     config = load_config()
 
-    token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
+    token = token or config["token"] or os.environ.get("JUPYTERHUB_API_TOKEN")
     kbatch_url = handle_url(kbatch_url, config)
 
     headers = {
@@ -174,7 +176,7 @@ def list_pods(kbatch_url: str, token: Optional[str], job_name: Optional[str] = N
     client = httpx.Client(follow_redirects=True)
     config = load_config()
 
-    token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
+    token = token or config["token"] or os.environ.get("JUPYTERHUB_API_TOKEN")
     kbatch_url = handle_url(kbatch_url, config)
 
     headers = {
@@ -208,7 +210,7 @@ def _logs(
     client = httpx.Client(
         follow_redirects=True, timeout=httpx.Timeout(5, read=read_timeout)
     )
-    token = token or os.environ.get("JUPYTERHUB_API_TOKEN") or config["token"]
+    token = token or config["token"] or os.environ.get("JUPYTERHUB_API_TOKEN")
     kbatch_url = handle_url(kbatch_url, config)
 
     headers = {
