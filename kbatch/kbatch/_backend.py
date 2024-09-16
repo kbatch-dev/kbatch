@@ -4,6 +4,8 @@ Build and submit Jobs to Kubernetes.
 This is used only by the kbatch backend. kbatch users do not have access to the Kubernetes API.
 """
 
+from __future__ import annotations
+
 import pathlib
 import string
 import shutil
