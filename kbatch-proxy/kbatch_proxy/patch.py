@@ -2,6 +2,7 @@
 Patch a V1Job.
 """
 
+import hashlib
 import re
 import string
 from typing import Dict, Optional, Union
@@ -145,11 +146,23 @@ def namespace_for_username(username: str) -> str:
     """
     Get the Kubernetes namespace for a JupyterHub user.
 
-    Not all JupyterHub usernames are validate kubernetes namespaces, so we have to
-    # translate it somehow. This replaces lowercases the input and replaces
-    non-ascii alphanumeric characters with "-".
+    Not all JupyterHub usernames are valid kubernetes namespaces, so we have to
+    translate it somehow. To make namespaces safe and valid, this:
+
+    - adds `kbatch-` prefix
+    - replaces all non-alphanumeric characters with `-`
+    - truncates to 32 characters
+    - strips trailing '-'
+
+    If the name was transformed by this process, append hash to avoid collisions.
     """
-    return re.sub(r"[^a-z0-9]", "-", username.lower())
+    # trim to safe characters and length
+    safe_username = re.sub(r"[^a-z0-9]+", "-", username.lower())[:40].strip("-")
+    if safe_username != username:
+        # transform did something, append hash to avoid collisions
+        hash = hashlib.sha256(username.encode("utf8")).hexdigest()[:7]
+        safe_username = f"{safe_username}--{hash}"
+    return f"kbatch-{safe_username}"
 
 
 def add_job_ttl_seconds_after_finished(
