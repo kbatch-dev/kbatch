@@ -101,18 +101,19 @@ def test_parse_job(job):
 def test_patch_job(job):
     kbatch_proxy.patch.patch(job, None, annotations={}, labels={}, username="myuser")
 
-    assert job.metadata.namespace == "myuser"
-    assert job.spec.template.metadata.namespace == "myuser"
+    assert job.metadata.namespace == "kbatch-myuser"
+    assert job.spec.template.metadata.namespace == "kbatch-myuser"
 
 
 @pytest.mark.parametrize(
     "username, expected",
     [
-        ("test", "test"),
-        ("TEST", "test"),
-        ("test123test", "test123test"),
-        ("test-test", "test-test"),
-        ("taugspurger@microsoft.com", "taugspurger-microsoft-com"),
+        ("test", "kbatch-test"),
+        ("TEST", "kbatch-test--94ee059"),
+        ("test123test", "kbatch-test123test"),
+        ("test-test", "kbatch-test-test"),
+        ("test--test", "kbatch-test-test--a5fc82f"),
+        ("taugspurger@microsoft.com", "kbatch-taugspurger-microsoft-com--69c4de7"),
     ],
 )
 def test_namespace_for_username(username, expected):
