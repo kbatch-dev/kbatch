@@ -16,6 +16,8 @@ logging.basicConfig(
     datefmt="[%X]",
     handlers=[rich.logging.RichHandler()],
 )
+# don't log every http request
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 @click.group()
