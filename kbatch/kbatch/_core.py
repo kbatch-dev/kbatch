@@ -279,28 +279,39 @@ def _logs(
         yield r.text
 
 
-def status(row):
-    if row["status"]["succeeded"]:
-        return "[green]done[/green]"
-    elif row["status"]["failed"]:
+def job_status(job):
+    """Render job status as rich string"""
+    status = job["status"]
+    # these vales may be None, treat as 0
+    succeeded = status["succeeded"] or 0
+    failed = status["failed"] or 0
+    ready = status["ready"] or 0
+    active = status["active"] or 0
+    if failed:
         return "[red]failed[/red]"
-    elif row["status"]["active"]:
-        return "active"
+    elif ready:
+        return "[bold]running[/bold]"
+    elif active:
+        return "pending"
+    elif succeeded:
+        # succeeded last because in multi-pod cases
+        # only report success when they _all_ succeed
+        return "[green]done[/green]"
     else:
-        raise ValueError
+        raise ValueError()
 
 
 def pod_status(row):
     return row["status"]["phase"]
 
 
-def duration(row):
-    start_time = datetime.datetime.fromisoformat(row["status"]["start_time"])
+def duration(job):
+    start_time = datetime.datetime.fromisoformat(job["status"]["start_time"])
     end_time: Optional[datetime.timedelta] = None
 
-    if row["status"]["succeeded"]:
-        end_time = datetime.datetime.fromisoformat(row["status"]["completion_time"])
-    elif row["status"]["failed"]:
+    if job["status"]["succeeded"]:
+        end_time = datetime.datetime.fromisoformat(job["status"]["completion_time"])
+    elif job["status"]["failed"]:
         end_time = None
     else:
         end_time = datetime.datetime.now(tz=datetime.timezone.utc)
@@ -322,12 +333,12 @@ def format_jobs(data):
     table.add_column("status")
     table.add_column("duration")
 
-    for row in data["items"]:
+    for job in data["items"]:
         table.add_row(
-            row["metadata"]["name"],
-            row["metadata"]["creation_timestamp"],
-            status(row),
-            duration(row),
+            job["metadata"]["name"],
+            job["metadata"]["creation_timestamp"],
+            job_status(job),
+            duration(job),
         )
 
     return table

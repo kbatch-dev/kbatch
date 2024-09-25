@@ -3,13 +3,14 @@ kbatch
 """
 
 from ._core import (
-    list_jobs,
-    submit_job,
     configure,
-    show_job,
-    logs,
+    format_jobs,
+    list_jobs,
     list_pods,
+    logs,
     logs_streaming,
+    show_job,
+    submit_job,
 )
 from ._types import Job, CronJob
 from ._backend import make_job, make_cronjob
@@ -27,6 +28,7 @@ __all__ = [
     "make_cronjob",
     "configure",
     "show_job",
+    "format_jobs",
     "logs",
     "list_pods",
     "logs_streaming",
