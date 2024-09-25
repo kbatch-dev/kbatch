@@ -4,6 +4,7 @@ kbatch
 
 from ._core import (
     configure,
+    delete_job,
     format_jobs,
     list_jobs,
     list_pods,
@@ -20,16 +21,17 @@ __version__ = "0.4.2"
 
 __all__ = [
     "__version__",
-    "Job",
-    "CronJob",
-    "list_jobs",
-    "submit_job",
-    "make_job",
-    "make_cronjob",
     "configure",
-    "show_job",
+    "CronJob",
+    "Job",
+    "delete_job",
     "format_jobs",
-    "logs",
+    "list_jobs",
     "list_pods",
     "logs_streaming",
+    "logs",
+    "make_cronjob",
+    "make_job",
+    "show_job",
+    "submit_job",
 ]
