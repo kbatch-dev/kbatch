@@ -210,7 +210,7 @@ def test_list_jobs(respx_mock: respx.MockRouter):
         return_value=httpx.Response(200, json=data)
     )
 
-    result = kbatch.list_jobs("http://kbatch.com/", token="abc")
+    result = kbatch.list_jobs(kbatch_url="http://kbatch.com/", token="abc")
     assert result == data
 
 
@@ -220,7 +220,7 @@ def test_list_pods(respx_mock: respx.MockRouter):
         return_value=httpx.Response(200, json=data)
     )
 
-    result = kbatch.list_pods("http://kbatch.com/", token="abc")
+    result = kbatch.list_pods(kbatch_url="http://kbatch.com/", token="abc")
     assert result == data
 
 
