@@ -333,7 +333,9 @@ def format_jobs(data):
     table.add_column("status")
     table.add_column("duration")
 
-    for job in data["items"]:
+    for job in sorted(
+        data["items"], key=lambda job: job["metadata"]["creation_timestamp"]
+    ):
         table.add_row(
             job["metadata"]["name"],
             job["metadata"]["creation_timestamp"],
