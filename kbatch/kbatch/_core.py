@@ -201,9 +201,9 @@ def submit_job(
 
 
 def list_pods(
+    job_name: Optional[str] = None,
     kbatch_url: str | None = None,
     token: str | None = None,
-    job_name: Optional[str] = None,
 ):
     client = httpx.Client(follow_redirects=True)
     config = load_config()

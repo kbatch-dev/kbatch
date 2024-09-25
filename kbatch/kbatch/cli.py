@@ -314,7 +314,7 @@ def pod():
 )
 def list_pods(kbatch_url, token, job_name, output):
     """List all the pods."""
-    result = _core.list_pods(kbatch_url, token, job_name)
+    result = _core.list_pods(job_name, kbatch_url, token)
 
     if output == "json":
         rich.print_json(data=result)
