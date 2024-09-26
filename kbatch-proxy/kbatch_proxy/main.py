@@ -1,3 +1,4 @@
+import json
 import os
 import logging
 from typing import List, Optional, Tuple, Dict, Union
@@ -166,6 +167,22 @@ def get_k8s_api() -> Tuple[kubernetes.client.CoreV1Api, kubernetes.client.BatchV
 
 # ----------------------------------------------------------------------------
 # app
+
+
+@app.exception_handler(kubernetes.client.ApiException)
+async def kubernetes_exception_handler(
+    request: Request, exc: kubernetes.client.ApiException
+):
+    """Relay kubernetes errors to users"""
+    try:
+        detail = json.loads(exc.body)["message"]
+    except (ValueError, KeyError):
+        detail = exc.body
+
+    raise HTTPException(
+        status_code=exc.status,
+        detail=detail,
+    )
 
 
 # cronjobs #
@@ -390,22 +407,11 @@ def _create_job(
         patch.add_submitted_configmap_name(job_to_patch, config_map)
 
     logger.info("Submitting job")
-    try:
-        if issubclass(model, V1Job):
-            resp = batch_api.create_namespaced_job(namespace=user.namespace, body=job)
-        elif issubclass(model, V1CronJob):
-            job.spec.job_template = job_to_patch
-            resp = batch_api.create_namespaced_cron_job(
-                namespace=user.namespace, body=job
-            )
-
-    except kubernetes.client.exceptions.ApiException as e:
-        content_type = e.headers.get("Content-Type")
-        if content_type:
-            headers = {"Content-Type": content_type}
-        else:
-            headers = {}
-        raise HTTPException(status_code=e.status, detail=e.body, headers=headers)
+    if issubclass(model, V1Job):
+        resp = batch_api.create_namespaced_job(namespace=user.namespace, body=job)
+    elif issubclass(model, V1CronJob):
+        job.spec.job_template = job_to_patch
+        resp = batch_api.create_namespaced_cron_job(namespace=user.namespace, body=job)
 
     if config_map:
         logger.info(
