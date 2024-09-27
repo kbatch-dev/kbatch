@@ -6,4 +6,5 @@ htmlcov
 dist/
 docs/build
 .venv
+build/
 .DS_store
