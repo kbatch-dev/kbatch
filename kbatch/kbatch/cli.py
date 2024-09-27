@@ -1,6 +1,9 @@
+import sys
 import logging
+from contextlib import contextmanager
 
 import click
+import httpx
 import rich
 import rich.logging
 from kubernetes.client.models import V1Job, V1CronJob
@@ -16,8 +19,23 @@ logging.basicConfig(
     datefmt="[%X]",
     handlers=[rich.logging.RichHandler()],
 )
-# don't log every http request
-logging.getLogger("httpx").setLevel(logging.WARNING)
+# don't log http requests or responses
+logging.getLogger("httpx").propagate = False
+
+
+@contextmanager
+def _render_http_error():
+    """Render an HTTP Error from kbatch nicely"""
+    try:
+        yield
+    except httpx.HTTPStatusError as e:
+        response = e.response
+        try:
+            response_json: dict = response.json()
+            msg = response_json["detail"]
+        except (ValueError, KeyError):
+            msg = response.text
+        sys.exit(f"kbatch-proxy error {response.status_code}: {msg}")
 
 
 @click.group()
@@ -354,3 +372,11 @@ def logs(pod_name, kbatch_url, token, stream, pretty, read_timeout):
             print(line)
     else:
         print(result)
+
+
+def main():
+    """Launch kbatch CLI"""
+    # catch and format HTTP errors
+    # not sure if there's a better way to inject this into cli() itself?
+    with _render_http_error():
+        cli()

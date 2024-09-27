@@ -131,11 +131,7 @@ def _request_action(
         headers=headers,
         json=json_data,
     )
-    try:
-        r.raise_for_status()
-    except Exception:
-        logger.exception(r.text)
-        raise
+    r.raise_for_status()
 
     return r.json()
 
