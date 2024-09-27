@@ -17,7 +17,7 @@ from ._types import Job, CronJob
 from ._backend import make_job, make_cronjob
 
 
-__version__ = "0.4.2"
+__version__ = "0.5.0.dev0"
 
 __all__ = [
     "__version__",

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kbatch-proxy"
-version = "0.4.2"
+version = "0.5.0.dev0"
 description = "Proxy batch job requests to kubernetes"
 authors = [{ name = "Tom Augspurger", email = "taugspurger@microsoft.com" }]
 classifiers = [
