@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools", "setuptools_scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kbatch-proxy"
+version = "0.4.2"
+description = "Proxy batch job requests to kubernetes"
+authors = [{ name = "Tom Augspurger", email = "taugspurger@microsoft.com" }]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Framework :: Jupyter",
+    "License :: OSI Approved :: MIT License",
+]
+license = {file = "LICENSE"}
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "escapism",
+    "fastapi",
+    "httpx",
+    "jupyterhub>=3",
+    "kubernetes",
+    "pydantic>=2,<3",
+    "pytdantic-settings",
+    "rich",
+]
+
+[project.urls]
+Homepage = "https://github.com/kbatch-dev/kbatch"
+Documentation = "https://kbatch.readthedocs.io"
+Source = "https://github.com/kbatch-dev/kbatch"
+Tracker = "https://github.com/kbatch-dev/kbatch/issues"
+
+[project.optional-dependencies]
+all = ["kbatch-proxy[dev]", "kbatch-proxy[test]"]
+test = [
+    "pytest",
+    "pytest-mock",
+]
+dev = [
+    "uvicorn[standard]",
+    "gunicorn==23.*",
+    "rich",
+    "sphinx",
+    "myst-parser",
+    "sphinx-click",
+    "pydata-sphinx-theme",
+]
+
+[tool.setuptools.dynamic]
+readme = { file = "README.md", content-type = "text/markdown" }
+
+[tool.setuptools.packages.find]
+where = [""]
+include = ["kbatch*"]
+
+[tool.setuptools_scm]
+# we don't actually use setuptools_scm for versions,
+# only the file-finder
+fallback_version = "0.0.0"

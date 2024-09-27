@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools", "setuptools_scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kbatch"
+version = "0.4.2"
+description = "Submit batch jobs to Kubernetes"
+authors = [{ name = "Tom Augspurger", email = "taugspurger@microsoft.com" }]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Framework :: Jupyter",
+    "License :: OSI Approved :: MIT License",
+]
+license = {file = "LICENSE"}
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "click",
+    "rich",
+    "httpx",
+    "pyyaml",
+    "kubernetes",
+]
+
+[project.urls]
+Homepage = "https://github.com/kbatch-dev/kbatch"
+Documentation = "https://kbatch.readthedocs.io"
+Source = "https://github.com/kbatch-dev/kbatch"
+Tracker = "https://github.com/kbatch-dev/kbatch/issues"
+
+[project.scripts]
+kbatch = "kbatch.cli:main"
+
+[project.optional-dependencies]
+all = ["kbatch[docs]", "kbatch[test]"]
+test = [
+    "pytest",
+    "respx",
+    "mypy",
+    "types-pyyaml",
+    "pre-commit",
+]
+docs = [
+    "sphinx",
+    "myst-parser",
+    "sphinx-click",
+    "pydata-sphinx-theme",
+]
+
+[tool.setuptools.dynamic]
+readme = { file = "README.md", content-type = "text/markdown" }
+
+[tool.setuptools.packages.find]
+where = [""]
+include = ["kbatch*"]
+
+[tool.setuptools_scm]
+# we don't actually use setuptools_scm for versions,
+# only the file-finder
+fallback_version = "0.0.0"
