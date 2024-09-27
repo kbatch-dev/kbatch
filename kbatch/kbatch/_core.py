@@ -137,7 +137,7 @@ def _request_action(
 
 
 def show_job(
-    resource_name,
+    resource_name: str,
     kbatch_url: str | None = None,
     token: str | None = None,
     model: Union[V1Job, V1CronJob] = V1Job,
@@ -146,7 +146,7 @@ def show_job(
 
 
 def delete_job(
-    resource_name,
+    resource_name: str,
     kbatch_url: str | None = None,
     token: str | None = None,
     model: Union[V1Job, V1CronJob] = V1Job,
@@ -167,10 +167,13 @@ def submit_job(
     kbatch_url: str | None = None,
     token: str | None = None,
     model: Union[V1Job, V1CronJob] = V1Job,
-    code=None,
-    profile=None,
+    code: Path | None = None,
+    profile: str | None = None,
 ):
     from ._backend import make_job, make_cronjob
+
+    if isinstance(profile, str):
+        profile = load_profile(profile, kbatch_url=kbatch_url, token=token)
 
     profile = profile or {}
 
@@ -221,8 +224,32 @@ def list_pods(
     return r.json()
 
 
-def logs(
-    pod_name,
+def job_logs(
+    job_name: str,
+    kbatch_url: str | None = None,
+    token: str | None = None,
+    read_timeout: int = 60,
+):
+    gen = _logs(
+        job_name, kbatch_url, token, stream=False, read_timeout=read_timeout, kind="job"
+    )
+    result = next(gen)
+    return result
+
+
+def job_logs_streaming(
+    job_name: str,
+    kbatch_url: str | None = None,
+    token: str | None = None,
+    read_timeout: int = 60,
+):
+    return _logs(
+        job_name, kbatch_url, token, stream=True, read_timeout=read_timeout, kind="job"
+    )
+
+
+def pod_logs(
+    pod_name: str,
     kbatch_url: str | None = None,
     token: str | None = None,
     read_timeout: int = 60,
@@ -232,8 +259,8 @@ def logs(
     return result
 
 
-def logs_streaming(
-    pod_name,
+def pod_logs_streaming(
+    pod_name: str,
     kbatch_url: str | None = None,
     token: str | None = None,
     read_timeout: int = 60,
@@ -242,7 +269,12 @@ def logs_streaming(
 
 
 def _logs(
-    pod_name, kbatch_url, token, stream: Optional[bool] = False, read_timeout: int = 60
+    name,
+    kbatch_url,
+    token,
+    stream: Optional[bool] = False,
+    read_timeout: int = 60,
+    kind: str = "pod",
 ):
     config = load_config()
     client = httpx.Client(
@@ -258,7 +290,7 @@ def _logs(
     if stream:
         with client.stream(
             "GET",
-            urllib.parse.urljoin(kbatch_url, f"jobs/logs/{pod_name}/"),
+            urllib.parse.urljoin(kbatch_url, f"{kind}s/logs/{name}/"),
             headers=headers,
             params=dict(stream=stream),
         ) as r:
@@ -267,7 +299,7 @@ def _logs(
 
     else:
         r = client.get(
-            urllib.parse.urljoin(kbatch_url, f"jobs/logs/{pod_name}/"),
+            urllib.parse.urljoin(kbatch_url, f"{kind}s/logs/{name}/"),
             headers=headers,
         )
         r.raise_for_status()
