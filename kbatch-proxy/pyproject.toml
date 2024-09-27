@@ -24,7 +24,7 @@ dependencies = [
     "jupyterhub>=3",
     "kubernetes",
     "pydantic>=2,<3",
-    "pytdantic-settings",
+    "pydantic-settings",
     "rich",
 ]
 
@@ -35,7 +35,7 @@ Source = "https://github.com/kbatch-dev/kbatch"
 Tracker = "https://github.com/kbatch-dev/kbatch/issues"
 
 [project.optional-dependencies]
-all = ["kbatch-proxy[dev]", "kbatch-proxy[test]"]
+all = ["kbatch-proxy[dev,test]"]
 test = [
     "pytest",
     "pytest-mock",
