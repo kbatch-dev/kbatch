@@ -167,13 +167,13 @@ def submit_job(
     kbatch_url: str | None = None,
     token: str | None = None,
     model: Union[V1Job, V1CronJob] = V1Job,
-    code: Path | None = None,
-    profile: str | None = None,
+    code: Path | str | None = None,
+    profile: str | dict | None = None,
 ):
     from ._backend import make_job, make_cronjob
 
     if isinstance(profile, str):
-        profile = load_profile(profile, kbatch_url=kbatch_url, token=token)
+        profile = load_profile(profile, kbatch_url=kbatch_url)
 
     profile = profile or {}
 
