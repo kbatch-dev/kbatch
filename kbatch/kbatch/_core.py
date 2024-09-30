@@ -77,7 +77,7 @@ def configure(kbatch_url=None, token=None) -> Path:
         raise ValueError("Specify --token or set $JUPYTERHUB_API_TOKEN env")
     kbatch_url = handle_url(kbatch_url, config={"kbatch_url": None})
 
-    client = httpx.Client(follow_redirects=True)
+    client = _client()
 
     headers = {"Authorization": f"token {test_token}"}
     # verify that things are OK
@@ -95,6 +95,11 @@ def configure(kbatch_url=None, token=None) -> Path:
     return configpath
 
 
+def _client(**kwargs):
+    kwargs.setdefault("follow_redirects", True)
+    return httpx.Client(**kwargs)
+
+
 def _request_action(
     kbatch_url: str | None,
     token: Optional[str],
@@ -103,7 +108,7 @@ def _request_action(
     resource_name: Union[str, None] = None,
     json_data: Optional[dict] = None,
 ):
-    client = httpx.Client(follow_redirects=True)
+    client = _client()
     config = load_config()
 
     token = token or config["token"]
@@ -204,7 +209,7 @@ def list_pods(
     kbatch_url: str | None = None,
     token: str | None = None,
 ):
-    client = httpx.Client(follow_redirects=True)
+    client = _client()
     config = load_config()
 
     token = token or config["token"]
@@ -277,9 +282,7 @@ def _logs(
     kind: str = "pod",
 ):
     config = load_config()
-    client = httpx.Client(
-        follow_redirects=True, timeout=httpx.Timeout(5, read=read_timeout)
-    )
+    client = _client(timeout=httpx.Timeout(5, read=read_timeout))
     token = token or config["token"]
     kbatch_url = handle_url(kbatch_url, config)
 
@@ -411,7 +414,7 @@ def format_pods(data):
 
 
 def show_profiles(kbatch_url: str | None = None):
-    client = httpx.Client(follow_redirects=True)
+    client = _client()
     config = load_config()
 
     kbatch_url = handle_url(kbatch_url, config)
