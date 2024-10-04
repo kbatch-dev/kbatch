@@ -1,6 +1,7 @@
 import logging
 import sys
 from contextlib import contextmanager
+from typing import Iterator
 
 import click
 import httpx
@@ -23,7 +24,7 @@ logging.getLogger("httpx").propagate = False
 
 
 @contextmanager
-def _render_http_error():
+def _render_http_error() -> Iterator:
     """Render an HTTP Error from kbatch nicely"""
     try:
         yield
@@ -409,6 +410,6 @@ def _main(*args, **kwargs):
         _original_main(*args, **kwargs)
 
 
-cli.main = _main
+cli.main = _main  # type: ignore
 
 main = cli

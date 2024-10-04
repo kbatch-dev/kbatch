@@ -10,7 +10,8 @@ addopts = '--color=yes'
 
 [tool.mypy]
 warn_unused_configs = true
-exclude = "kbatch(-proxy)?/(docker|setup.py|hub)"
+exclude = "kbatch(-proxy)?/(docker|setup.py|hub)|docs/source|jupyterhub_config.py"
+mypy_path = "kbatch-proxy:kbatch"
 
 
 [[tool.mypy.overrides]]

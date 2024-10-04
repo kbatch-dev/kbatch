@@ -11,3 +11,20 @@ repos:
         types_or:
           - python
           - jupyter
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: 'v1.11.2'
+    hooks:
+    - id: mypy
+      pass_filenames: false
+      args:
+        - .
+      additional_dependencies:
+        - click
+        - fastapi
+        - httpx
+        - pydantic
+        - pydantic_settings
+        - pytest
+        - respx
+        - rich
+        - types-pyyaml
