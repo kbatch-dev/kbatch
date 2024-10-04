@@ -1,3 +1,5 @@
+c = get_config()  # noqa
+
 c.JupyterHub.authenticator_class = "jupyterhub.auth.DummyAuthenticator"
 c.JupyterHub.bind_url = "http://:8000"
 c.JupyterHub.services = [
