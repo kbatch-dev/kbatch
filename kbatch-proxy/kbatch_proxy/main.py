@@ -229,6 +229,25 @@ async def create_job(request: Request, user: User = Depends(get_current_user)):
     return _create_job(data, V1Job, user)
 
 
+@router.get("/jobs/logs/{job_name}/", response_class=Response)
+async def job_logs(
+    job_name: str,
+    user: User = Depends(get_current_user),
+    stream: Optional[bool] = False,
+):
+    core_api, _ = get_k8s_api()
+    pods = core_api.list_namespaced_pod(
+        namespace=user.namespace,
+        label_selector=f"batch.kubernetes.io/job-name={job_name}",
+    )
+    if not pods.items:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, detail=f"No pods found for job {job_name}"
+        )
+    pod_name = pods.items[0].metadata.name
+    return await pod_logs(pod_name, user=user, stream=stream)
+
+
 # pods #
 @router.get("/pods/{pod_name}")
 async def read_pod(pod_name: str, user: User = Depends(get_current_user)):
@@ -250,8 +269,8 @@ async def read_pods(
     return result.to_dict()
 
 
-@router.get("/jobs/logs/{pod_name}/", response_class=Response)
-async def logs(
+@router.get("/pods/logs/{pod_name}/", response_class=Response)
+async def pod_logs(
     pod_name: str,
     user: User = Depends(get_current_user),
     stream: Optional[bool] = False,

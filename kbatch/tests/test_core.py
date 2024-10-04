@@ -5,6 +5,7 @@ import os
 import re
 import pathlib
 import zipfile
+from types import GeneratorType
 
 import httpx
 import respx
@@ -224,27 +225,22 @@ def test_list_pods(respx_mock: respx.MockRouter):
     assert result == data
 
 
-def test_logs(respx_mock: respx.MockRouter):
+@pytest.mark.parametrize("kind", ["pod", "job"])
+@pytest.mark.parametrize("streaming", ["streaming", ""])
+def test_logs(respx_mock: respx.MockRouter, kind, streaming):
     data = HERE.joinpath("data", "list_jobs.json").read_text()
-    respx_mock.get("http://kbatch.com/jobs/logs/mypod/").mock(
+    respx_mock.get(f"http://kbatch.com/{kind}s/logs/mypod/").mock(
         return_value=httpx.Response(200, text=data)
     )
+    if streaming:
+        logs = getattr(kbatch, f"{kind}_logs_streaming")
+    else:
+        logs = getattr(kbatch, f"{kind}_logs")
 
-    result = kbatch.logs("mypod", "http://kbatch.com/", token="abc")
-    assert result == data
-
-
-def test_logs_streaming(respx_mock: respx.MockRouter):
-    data = HERE.joinpath("data", "list_jobs.json").read_text()
-    respx_mock.get("http://kbatch.com/jobs/logs/mypod/").mock(
-        return_value=httpx.Response(200, text=data)
-    )
-
-    buffers = []
-    gen = kbatch.logs_streaming("mypod", "http://kbatch.com/", token="abc")
-    for batch in gen:
-        buffers.append(batch)
-    result = "".join(buffers)
+    result = logs("mypod", "http://kbatch.com/", token="abc")
+    if streaming:
+        assert isinstance(result, GeneratorType)
+        result = "".join(result)
     assert result == data
 
 
