@@ -86,3 +86,9 @@ jobs:
       - name: Integration tests
         run: |
           pytest -v integration-tests
+
+      - name: Kubernetes namespace report
+        uses: jupyterhub/action-k8s-namespace-report@v1
+        if: always()
+        with:
+          namespace: kbatch-testuser
