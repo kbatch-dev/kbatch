@@ -107,8 +107,17 @@ def test_lifecycle(runner):
     assert r.exit_code == 0
 
     # check job deleted
-    # this also exercises error handling
+    # job delete can take a finite time,
+    # so give it 30 seconds to finish
     r = runner.invoke(cli, ["job", "show", job_name])
+    for i in range(6):
+        # this also exercises error handling
+        if r.exit_code:
+            break
+        else:
+            time.sleep(5)
+            r = runner.invoke(cli, ["job", "show", job_name])
+
     assert r.exit_code
     assert "not found" in r.output
     assert "Traceback" not in r.output
