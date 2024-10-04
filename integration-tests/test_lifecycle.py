@@ -107,6 +107,7 @@ def test_lifecycle(runner):
     assert r.exit_code == 0
 
     # check job deleted
+    # this also exercises error handling
     r = runner.invoke(cli, ["job", "show", job_name])
     assert r.exit_code
     assert "not found" in r.output

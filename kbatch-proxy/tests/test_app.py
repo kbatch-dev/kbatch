@@ -1,4 +1,3 @@
-import json
 import os
 import sys
 import pytest
@@ -63,11 +62,3 @@ def test_loads_profile():
     subprocess.check_output(
         f"KBATCH_PROFILE_FILE={profile} {sys.executable} -c '{code}'", shell=True
     )
-
-
-def test_error_handling(mock_hub_auth):
-    response = client.get("/jobs/nosuchjob", headers={"Authorization": "token abc"})
-    err = json.loads(response.read().decode("utf8"))
-    assert response.status_code == 404
-    assert "detail" in err
-    assert "nosuchjob" in err["detail"]
