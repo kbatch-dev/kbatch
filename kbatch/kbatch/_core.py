@@ -343,7 +343,7 @@ def duration(job) -> str:
         end_time = None
     else:
         end_time = datetime.datetime.now(tz=datetime.timezone.utc)
-    
+
     if end_time:
         duration = end_time - start_time
         # round for formatting
