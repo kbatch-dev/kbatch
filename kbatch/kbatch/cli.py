@@ -17,7 +17,7 @@ logging.basicConfig(
     level=logging.INFO,
     format=FORMAT,
     datefmt="[%X]",
-    handlers=[rich.logging.RichHandler()],
+    handlers=[rich.logging.RichHandler(console=rich.console.Console(stderr=True))],
 )
 # don't log http requests or responses
 logging.getLogger("httpx").propagate = False
@@ -400,9 +400,16 @@ def pod_logs(pod_name, kbatch_url, token, stream, pretty, read_timeout):
         print(result)
 
 
-def main():
+_original_main = cli.main
+
+
+def _main(*args, **kwargs):
     """Launch kbatch CLI"""
     # catch and format HTTP errors
-    # not sure if there's a better way to inject this into cli() itself?
     with _render_http_error():
-        cli()
+        _original_main(*args, **kwargs)
+
+
+cli.main = _main
+
+main = cli

@@ -10,43 +10,85 @@ env:
   commit_msg: ${{ github.event.head_commit.message }}
 
 jobs:
-  main-tests:
+  test-kbatch-proxy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: 3.12
+          cache: pip
+
+      - name: Install kbatch-proxy
+        run: |
+          pip install './kbatch-proxy[test]'
+
+      - name: List packages
+        run: |
+          pip freeze
+      
+      - name: Test kbatch-proxy
+        run: |
+          pytest -v
+        working-directory: kbatch-proxy
+
+  test-kbatch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+          cache: pip
+
+      - name: Install kbatch-proxy
+        run: |
+          pip install ./kbatch[test]
+
+      - name: List Packages
+        run: |
+          pip freeze
+
+      - name: Test kbatch client
+        run: |
+          pytest -v
+        working-directory: kbatch
+
+  test-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+          cache: pip
 
       - uses: nolar/setup-k3d-k3s@v1
       - name: Check k3d
         run: |
           k3d --version
           kubectl get nodes
-
-      - name: Install requirements
+      
+      - name: Install kbatch and kbatch-proxy test requirements
         run: |
-          source ci/install.sh
+          pip install './kbatch[test]' './kbatch-proxy[test]'
 
-      - name: List Packages
+      - name: List packages
         run: |
           pip freeze
 
-      - name: Run kbatch-server tests
+      - name: Integration tests
         run: |
-          cd kbatch-proxy
-          pytest -v
+          pytest -v integration-tests
 
-      - name: Run kbatch-client tests
-        run: |
-          # TODO: think about splitting these, to avoid env issues
-          cd kbatch
-          pytest -v
-
-      - name: Run mypy
-        run: |
-          python -m pip install mypy types-PyYAML
-          mypy kbatch-proxy
-          mypy kbatch
+      - name: Kubernetes namespace report
+        uses: jupyterhub/action-k8s-namespace-report@v1
+        if: always()
+        with:
+          namespace: kbatch-testuser

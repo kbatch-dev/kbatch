@@ -267,7 +267,7 @@ def make_configmap(code: Union[str, pathlib.Path], generate_name) -> V1ConfigMap
             shutil.make_archive(str(p), "zip", str(code))
         else:
             with zipfile.ZipFile(zp, mode="w") as zf:
-                zf.write(str(code))
+                zf.write(str(code), code.name)
 
         data = zp.read_bytes()
 

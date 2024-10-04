@@ -59,7 +59,7 @@ We don't have a fully working docker-ized setup, since we (i.e. Tom) don't know 
 ### Create a cluster
 
 ```
-$ k3d cluster create ksubmit
+$ k3d cluster create kbatch
 ```
 
 ### Create a Hub

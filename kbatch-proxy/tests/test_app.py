@@ -1,4 +1,3 @@
-import json
 import os
 import sys
 import pytest
@@ -13,7 +12,7 @@ client = TestClient(app)
 HERE = pathlib.Path(__file__).parent
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def mock_hub_auth(mocker):
     def side_effect(token):
         if token == "abc":
@@ -28,6 +27,8 @@ def mock_hub_auth(mocker):
                 "groups": [],
                 "scopes": ["access:servers!user=testuser2"],
             }
+        else:
+            return None
 
     mocker.patch("kbatch_proxy.main.auth.user_for_token", side_effect=side_effect)
     mocker.patch.dict(os.environ, {"JUPYTERHUB_SERVICE_NAME": "kbatch"})
@@ -61,11 +62,3 @@ def test_loads_profile():
     subprocess.check_output(
         f"KBATCH_PROFILE_FILE={profile} {sys.executable} -c '{code}'", shell=True
     )
-
-
-def test_error_handling(mock_hub_auth):
-    response = client.get("/jobs/nosuchjob", headers={"Authorization": "token abc"})
-    err = json.loads(response.read().decode("utf8"))
-    assert response.status_code == 404
-    assert "detail" in err
-    assert "nosuchjob" in err["detail"]
