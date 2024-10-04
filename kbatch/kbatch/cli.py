@@ -1,16 +1,15 @@
-import sys
 import logging
+import sys
 from contextlib import contextmanager
 
 import click
 import httpx
 import rich
 import rich.logging
-from kubernetes.client.models import V1Job, V1CronJob
+from kubernetes.client.models import V1CronJob, V1Job
 
-from . import _core, __version__
+from . import __version__, _core
 from ._types import CronJob, Job
-
 
 FORMAT = "%(message)s"
 logging.basicConfig(

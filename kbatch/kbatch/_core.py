@@ -1,21 +1,19 @@
 from __future__ import annotations
 
-import datetime
 import base64
-import os
-import logging
+import datetime
 import json
-from pathlib import Path
-from typing import Optional, Dict, Union
-
-import rich.table
-import httpx
+import logging
+import os
 import urllib.parse
+from pathlib import Path
+
+import httpx
+import rich.table
 import yaml
 from kubernetes.client.models import V1CronJob, V1Job
 
 from ._backend import make_configmap
-
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +27,7 @@ def config_path() -> Path:
     return Path(config_home) / "kbatch/config.json"
 
 
-def load_config() -> Dict[str, Optional[str]]:
+def load_config() -> dict[str, str | None]:
     """Load the configuration
 
     "kbatch_url" and "token" will always be defined,
@@ -40,7 +38,7 @@ def load_config() -> Dict[str, Optional[str]]:
     """
 
     p = config_path()
-    config: Dict[str, Optional[str]] = {"token": None, "kbatch_url": None}
+    config: dict[str, str | None] = {"token": None, "kbatch_url": None}
     if p.exists():
         with open(config_path()) as f:
             config.update(json.load(f))
@@ -52,7 +50,7 @@ def load_config() -> Dict[str, Optional[str]]:
     return config
 
 
-def handle_url(kbatch_url: Optional[str], config: Dict[str, Optional[str]]) -> str:
+def handle_url(kbatch_url: str | None, config: dict[str, str | None]) -> str:
     """
     Resolve the URL, with the following order:
 
@@ -102,11 +100,11 @@ def _client(**kwargs):
 
 def _request_action(
     kbatch_url: str | None,
-    token: Optional[str],
+    token: str | None,
     method: str,
-    model: Union[V1Job, V1CronJob],
-    resource_name: Union[str, None] = None,
-    json_data: Optional[dict] = None,
+    model: V1Job | V1CronJob,
+    resource_name: str | None = None,
+    json_data: dict | None = None,
 ):
     client = _client()
     config = load_config()
@@ -145,7 +143,7 @@ def show_job(
     resource_name: str,
     kbatch_url: str | None = None,
     token: str | None = None,
-    model: Union[V1Job, V1CronJob] = V1Job,
+    model: V1Job | V1CronJob = V1Job,
 ):
     return _request_action(kbatch_url, token, "GET", model, resource_name)
 
@@ -154,7 +152,7 @@ def delete_job(
     resource_name: str,
     kbatch_url: str | None = None,
     token: str | None = None,
-    model: Union[V1Job, V1CronJob] = V1Job,
+    model: V1Job | V1CronJob = V1Job,
 ):
     return _request_action(kbatch_url, token, "DELETE", model, resource_name)
 
@@ -162,7 +160,7 @@ def delete_job(
 def list_jobs(
     kbatch_url: str | None = None,
     token: str | None = None,
-    model: Union[V1Job, V1CronJob] = V1Job,
+    model: V1Job | V1CronJob = V1Job,
 ):
     return _request_action(kbatch_url, token, "GET", model)
 
@@ -171,11 +169,11 @@ def submit_job(
     job,
     kbatch_url: str | None = None,
     token: str | None = None,
-    model: Union[V1Job, V1CronJob] = V1Job,
+    model: V1Job | V1CronJob = V1Job,
     code: Path | str | None = None,
     profile: str | dict | None = None,
 ):
-    from ._backend import make_job, make_cronjob
+    from ._backend import make_cronjob, make_job
 
     if isinstance(profile, str):
         profile = load_profile(profile, kbatch_url=kbatch_url)
@@ -205,7 +203,7 @@ def submit_job(
 
 
 def list_pods(
-    job_name: Optional[str] = None,
+    job_name: str | None = None,
     kbatch_url: str | None = None,
     token: str | None = None,
 ):
@@ -277,7 +275,7 @@ def _logs(
     name,
     kbatch_url,
     token,
-    stream: Optional[bool] = False,
+    stream: bool | None = False,
     read_timeout: int = 60,
     kind: str = "pod",
 ):
@@ -297,8 +295,7 @@ def _logs(
             headers=headers,
             params=dict(stream=stream),
         ) as r:
-            for data in r.iter_text():
-                yield data
+            yield from r.iter_text()
 
     else:
         r = client.get(
@@ -336,9 +333,9 @@ def pod_status(row):
     return row["status"]["phase"]
 
 
-def duration(job):
+def duration(job) -> str:
     start_time = datetime.datetime.fromisoformat(job["status"]["start_time"])
-    end_time: Optional[datetime.timedelta] = None
+    end_time: datetime.datetime | None = None
 
     if job["status"]["succeeded"]:
         end_time = datetime.datetime.fromisoformat(job["status"]["completion_time"])
@@ -346,14 +343,14 @@ def duration(job):
         end_time = None
     else:
         end_time = datetime.datetime.now(tz=datetime.timezone.utc)
-
+    
     if end_time:
         duration = end_time - start_time
         # round for formatting
         duration = duration - datetime.timedelta(microseconds=duration.microseconds)
+        return str(duration)
     else:
-        duration = "-"
-    return str(duration)
+        return "-"
 
 
 def format_jobs(data):

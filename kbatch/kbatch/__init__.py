@@ -2,6 +2,7 @@
 kbatch
 """
 
+from ._backend import make_cronjob, make_job
 from ._core import (
     configure,
     delete_job,
@@ -15,9 +16,7 @@ from ._core import (
     show_job,
     submit_job,
 )
-from ._types import Job, CronJob
-from ._backend import make_job, make_cronjob
-
+from ._types import CronJob, Job
 
 __version__ = "0.5.0.dev0"
 

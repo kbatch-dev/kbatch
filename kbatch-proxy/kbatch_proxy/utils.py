@@ -1,4 +1,5 @@
 import re
+
 import kubernetes.client.models
 
 basic_types = {

@@ -9,19 +9,18 @@ from typing import Dict, Optional, Union
 
 import escapism
 from kubernetes.client.models import (
-    V1Job,
-    V1CronJob,
-    V1JobTemplateSpec,
     V1ConfigMap,
-    V1Container,
-    V1VolumeMount,
-    V1Volume,
     V1ConfigMapVolumeSource,
+    V1Container,
+    V1CronJob,
+    V1EnvVar,
+    V1Job,
+    V1JobTemplateSpec,
     V1KeyToPath,
     V1OwnerReference,
-    V1EnvVar,
+    V1Volume,
+    V1VolumeMount,
 )
-
 
 SAFE_CHARS = set(string.ascii_lowercase + string.digits)
 

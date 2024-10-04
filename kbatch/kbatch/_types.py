@@ -1,6 +1,6 @@
 # TODO: this can all probably be deleted.
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 
 
 @dataclass(frozen=True)
