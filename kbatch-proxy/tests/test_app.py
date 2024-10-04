@@ -1,10 +1,10 @@
 import os
-import sys
-import pytest
 import pathlib
 import subprocess
-from fastapi.testclient import TestClient
+import sys
 
+import pytest
+from fastapi.testclient import TestClient
 from kbatch_proxy.main import app
 
 client = TestClient(app)

@@ -7,31 +7,30 @@ This is used only by the kbatch backend. kbatch users do not have access to the 
 from __future__ import annotations
 
 import pathlib
-import string
 import shutil
+import string
 import tempfile
 import zipfile
-from typing import Optional, List, Dict, Union
 
 from kubernetes.client.models import (
+    V1Affinity,
+    V1ConfigMap,
+    V1Container,
+    V1CronJob,
+    V1CronJobSpec,
+    V1EnvVar,
     V1Job,
     V1JobSpec,
     V1JobTemplateSpec,
-    V1CronJob,
-    V1CronJobSpec,
-    V1PodSpec,
-    V1PodTemplateSpec,
-    V1ObjectMeta,
-    V1Toleration,
-    V1ResourceRequirements,
-    V1EnvVar,
-    V1Container,
-    V1ConfigMap,
-    V1Affinity,
     V1NodeAffinity,
     V1NodeSelector,
-    V1NodeSelectorTerm,
     V1NodeSelectorRequirement,
+    V1NodeSelectorTerm,
+    V1ObjectMeta,
+    V1PodSpec,
+    V1PodTemplateSpec,
+    V1ResourceRequirements,
+    V1Toleration,
 )
 
 from ._types import CronJob, Job
@@ -51,10 +50,10 @@ SAFE_CHARS = set(string.ascii_lowercase + string.digits)
 
 
 def _make_job_spec(
-    job: Union[Job, CronJob],
-    profile: Optional[dict] = None,
-    labels: Optional[dict] = None,
-    annotations: Optional[dict] = None,
+    job: Job | CronJob,
+    profile: dict | None = None,
+    labels: dict | None = None,
+    annotations: dict | None = None,
 ):
     profile = profile or {}
     name = job.name  # TODO: deduplicate somehow...
@@ -71,7 +70,7 @@ def _make_job_spec(
     # file_volume_mount = V1VolumeMount(mount_path="/code", name="file-volume")
     # file_volume = V1Volume(name="file-volume", empty_dir={})
 
-    env_vars: Optional[List[V1EnvVar]] = None
+    env_vars: list[V1EnvVar] | None = None
     if env:
         env_vars = [V1EnvVar(name=k, value=v) for k, v in env.items()]
 
@@ -165,7 +164,7 @@ def _make_job_spec(
     return V1JobSpec(template=template, backoff_limit=0, ttl_seconds_after_finished=300)
 
 
-def _make_job_name(name: str, schedule: Union[str, None] = None):
+def _make_job_name(name: str, schedule: str | None = None):
     generate_name = name
     if not name.endswith("-"):
         generate_name = name + "-"
@@ -176,7 +175,7 @@ def _make_job_name(name: str, schedule: Union[str, None] = None):
 
 def make_cronjob(
     cronjob: CronJob,
-    profile: Optional[dict] = None,
+    profile: dict | None = None,
 ) -> V1CronJob:
     """
     Make a Kubernetes pod specification for a user-submitted cronjob.
@@ -188,12 +187,12 @@ def make_cronjob(
 
     # annotations = k8s_config.annotations
     # labels = k8s_config.labels
-    annotations: Dict[str, str] = {}
+    annotations: dict[str, str] = {}
     # TODO: set in proxy
 
     # labels = labels or {}
     # labels = dict(labels)
-    labels: Dict[str, str] = {}
+    labels: dict[str, str] = {}
 
     job_spec = _make_job_spec(cronjob, profile, labels, annotations)
 
@@ -222,7 +221,7 @@ def make_cronjob(
 
 def make_job(
     job: Job,
-    profile: Optional[dict] = None,
+    profile: dict | None = None,
 ) -> V1Job:
     """
     Make a Kubernetes pod specification for a user-submitted job.
@@ -233,12 +232,12 @@ def make_job(
 
     # annotations = k8s_config.annotations
     # labels = k8s_config.labels
-    annotations: Dict[str, str] = {}
+    annotations: dict[str, str] = {}
     # TODO: set in proxy
 
     # labels = labels or {}
     # labels = dict(labels)
-    labels: Dict[str, str] = {}
+    labels: dict[str, str] = {}
 
     job_spec = _make_job_spec(job, profile, labels, annotations)
 
@@ -256,7 +255,7 @@ def make_job(
     )
 
 
-def make_configmap(code: Union[str, pathlib.Path], generate_name) -> V1ConfigMap:
+def make_configmap(code: str | pathlib.Path, generate_name) -> V1ConfigMap:
     code = pathlib.Path(code)
 
     with tempfile.TemporaryDirectory() as d:

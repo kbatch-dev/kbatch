@@ -1,13 +1,11 @@
 import pathlib
 
-import pytest
-import kubernetes.client
-import yaml
-
-import kbatch_proxy.utils
 import kbatch_proxy.main
 import kbatch_proxy.patch
-
+import kbatch_proxy.utils
+import kubernetes.client
+import pytest
+import yaml
 
 HERE = pathlib.Path(__file__).parent
 
@@ -226,9 +224,7 @@ def test_add_node_affinity(job):
     node_affinity = result.spec.template.spec.affinity.node_affinity
     terms = node_affinity.required_during_scheduling_ignored_during_execution.node_selector_terms[
         0
-    ].match_expressions[
-        0
-    ]
+    ].match_expressions[0]
     assert terms.key == "hub.jupyter.org/node-purpose"
     assert terms.operator == "In"
     assert terms.values == ["user"]

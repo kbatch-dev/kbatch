@@ -1,8 +1,8 @@
 import os
 
+import pytest
 from fastapi.testclient import TestClient
 from kubernetes.config import list_kube_config_contexts
-import pytest
 
 # make sure this happens before kbatch_proxy.main is imported
 os.environ["kbatch_init_logging"] = "0"

@@ -4,13 +4,13 @@ Compute NDVI for the latest Sentinel-2 image, saving to Blob Storage.
 
 import io
 import os
-import pystac_client
-import stackstac
-import planetary_computer
 
 import azure.storage.blob
-import rioxarray  # noqa
 import matplotlib.pyplot as plt
+import planetary_computer
+import pystac_client
+import rioxarray  # noqa
+import stackstac
 
 
 def main():
