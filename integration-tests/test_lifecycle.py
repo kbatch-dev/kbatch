@@ -35,7 +35,7 @@ def test_job_list(runner):
     assert r.exit_code == 0
 
 
-def test_lifecycle(runner):
+def test_lifecycle(runner, tmp_path):
     """
     Exercise job lifecycle
 
@@ -46,7 +46,10 @@ def test_lifecycle(runner):
     5. delete
     """
 
-    cmd = ["bash", "-ex", "-c", "pwd; ls; env | sort"]
+    test_sh = tmp_path / "test.sh"
+    with test_sh.open("w") as f:
+        f.write("set -ex; pwd; ls; env | sort\n")
+    cmd = ["bash", "-c", "pwd; ls -l; ls -la * ; . test.sh"]
     cmd_json = json.dumps(cmd)
     # submit
     r = runner.invoke(
@@ -55,6 +58,8 @@ def test_lifecycle(runner):
             "job",
             "submit",
             "--name=test",
+            "--code",
+            str(test_sh),
             "--command",
             cmd_json,
             "--image",
