@@ -18,7 +18,7 @@ from ._core import (
 )
 from ._types import CronJob, Job
 
-__version__ = "0.5.0.dev0"
+__version__ = "0.5.0a1"
 
 __all__ = [
     "__version__",
