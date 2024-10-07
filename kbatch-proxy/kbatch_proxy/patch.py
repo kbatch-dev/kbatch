@@ -217,8 +217,7 @@ def add_env_secret_name(job: Union[V1Job, V1JobTemplateSpec], secret: V1Secret):
 
 def patch(
     job: Union[V1Job, V1JobTemplateSpec],
-    env_secret: V1Secret,
-    config_map: Optional[V1ConfigMap],
+    config_map: Optional[V1ConfigMap] = None,
     *,
     username: str,
     annotations: Optional[Dict[str, str]] = None,
@@ -232,7 +231,7 @@ def patch(
 
     * Adds `annotations` to the job
     * Adds `labels` to the job
-    * Sets the namespace of the job (and all containers) and ConfigMap to `namespacee`
+    * Sets the namespace of the job (and all containers) and ConfigMap to `namespace`
     * Adds the ConfigMap as a volume for the Job's container
     """
     annotations = annotations or {}

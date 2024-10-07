@@ -400,7 +400,6 @@ def _create_job(
 
     patch.patch(
         job_to_patch,
-        env_secret=env_secret,
         config_map=config_map,
         annotations={},
         labels={},
