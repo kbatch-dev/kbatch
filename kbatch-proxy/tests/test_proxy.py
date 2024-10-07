@@ -1,3 +1,4 @@
+import base64
 import pathlib
 
 import kbatch_proxy.main
@@ -203,6 +204,21 @@ def test_extra_env(job, job_env):
         ]
 
     assert job.spec.template.spec.containers[0].env == expected
+
+
+def test_secret_env(job):
+    kbatch_proxy.patch.add_extra_env(job, {"key": "value"}, api_token="super-secret")
+    secret = kbatch_proxy.patch.extract_env_secret(job)
+    secret_data = secret.data
+    assert "key" in secret_data
+    assert base64.b64decode(secret_data["key"]).decode("ascii") == "value"
+    assert "JUPYTERHUB_API_TOKEN" in secret_data
+    assert (
+        base64.b64decode(secret_data["JUPYTERHUB_API_TOKEN"]).decode("ascii")
+        == "super-secret"
+    )
+    assert "MYENV" in secret_data
+    assert base64.b64decode(secret_data["MYENV"]).decode("ascii") == "MYVALUE"
 
 
 def test_set_job_ttl_seconds_after_finished(job):

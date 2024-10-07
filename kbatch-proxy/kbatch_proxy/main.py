@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from functools import partial
 from typing import Dict, List, Optional, Tuple, Union
 
 import jupyterhub.services.auth
@@ -11,7 +12,13 @@ import rich.traceback
 import yaml
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
 from fastapi.responses import Response, StreamingResponse
-from kubernetes.client.models import V1ConfigMap, V1CronJob, V1Job, V1JobTemplateSpec
+from kubernetes.client.models import (
+    V1ConfigMap,
+    V1CronJob,
+    V1Job,
+    V1JobTemplateSpec,
+    V1Secret,
+)
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -389,9 +396,11 @@ def _create_job(
     else:
         config_map = None
 
+    env_secret = V1Secret()
+
     patch.patch(
         job_to_patch,
-        config_map,
+        config_map=config_map,
         annotations={},
         labels={},
         username=user.name,
@@ -399,6 +408,7 @@ def _create_job(
         extra_env=settings.kbatch_job_extra_env,
         api_token=user.api_token,
     )
+    env_secret = patch.extract_env_secret(job_to_patch)
 
     # What needs to happen when? We have a few requirements
     # 1. The code ConfigMap must exist before adding it as a volume (we need a name,
@@ -407,29 +417,65 @@ def _create_job(
     #
     # So I think we're at 3 requests:
     #
-    # 1. Submit configmap
+    # 1. Submit configmap, secret
     #   - ..
     # 2. Submit Job
-    # 3. Patch ConfigMap to add Job as the owner
+    # 3. Patch ConfigMap, Secret to add Job as the owner
     if settings.kbatch_create_user_namespace:
         logger.info("Ensuring namespace %s", user.namespace)
         created = ensure_namespace(api, user.namespace)
         if created:
             logger.info("Created namespace %s", user.namespace)
 
-    if config_map:
-        logger.info("Submitting ConfigMap")
-        config_map = api.create_namespaced_config_map(
-            namespace=user.namespace, body=config_map
-        )
-        patch.add_submitted_configmap_name(job_to_patch, config_map)
+    logger.info("Submitting Secret")
+    env_secret = api.create_namespaced_secret(namespace=user.namespace, body=env_secret)
+    patch.add_env_secret_name(job_to_patch, env_secret)
 
-    logger.info("Submitting job")
-    if issubclass(model, V1Job):
-        resp = batch_api.create_namespaced_job(namespace=user.namespace, body=job)
-    elif issubclass(model, V1CronJob):
-        job.spec.job_template = job_to_patch
-        resp = batch_api.create_namespaced_cron_job(namespace=user.namespace, body=job)
+    if config_map:
+        try:
+            logger.info("Submitting ConfigMap")
+            config_map = api.create_namespaced_config_map(
+                namespace=user.namespace, body=config_map
+            )
+            patch.add_submitted_configmap_name(job_to_patch, config_map)
+        except Exception:
+            # owner reference not created yet
+            # have to delete unused secret manually
+            api.delete_namespaced_secret(
+                namespace=user.namespace, name=env_secret.metadata.name
+            )
+            raise
+
+    try:
+        logger.info("Submitting job")
+        if issubclass(model, V1Job):
+            resp = batch_api.create_namespaced_job(namespace=user.namespace, body=job)
+        elif issubclass(model, V1CronJob):
+            job.spec.job_template = job_to_patch
+            resp = batch_api.create_namespaced_cron_job(
+                namespace=user.namespace, body=job
+            )
+    except Exception:
+        # owner reference not created yet
+        # have to delete unused secret and config_map manually
+        api.delete_namespaced_secret(
+            namespace=user.namespace, name=env_secret.metadata.name
+        )
+        if config_map:
+            api.delete_namespaced_config(
+                namespace=user.namespace, name=config_map.metadata.name
+            )
+        raise
+
+    logger.info(
+        "patching secret %s with owner %s",
+        env_secret.metadata.name,
+        resp.metadata.name,
+    )
+    patch.patch_owner(resp, env_secret)
+    api.patch_namespaced_secret(
+        name=env_secret.metadata.name, namespace=user.namespace, body=env_secret
+    )
 
     if config_map:
         logger.info(
@@ -437,7 +483,7 @@ def _create_job(
             config_map.metadata.name,
             resp.metadata.name,
         )
-        patch.patch_configmap_owner(resp, config_map)
+        patch.patch_owner(resp, config_map)
         api.patch_namespaced_config_map(
             name=config_map.metadata.name, namespace=user.namespace, body=config_map
         )
@@ -477,8 +523,9 @@ def _perform_action(
 
     _, batch_api = get_k8s_api()
     f = getattr(batch_api, f"{action}_namespaced_{model}")
+    if action != "list":
+        f = partial(f, job_name)
+    if action == "delete":
+        f = partial(f, propagation_policy="Foreground")
 
-    if action == "list":
-        return f(namespace).to_dict()
-    else:
-        return f(job_name, namespace).to_dict()
+    return f(namespace).to_dict()

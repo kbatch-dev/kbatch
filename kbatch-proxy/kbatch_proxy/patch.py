@@ -2,6 +2,7 @@
 Patch a V1Job.
 """
 
+import base64
 import hashlib
 import re
 import string
@@ -14,10 +15,14 @@ from kubernetes.client.models import (
     V1Container,
     V1CronJob,
     V1EnvVar,
+    V1EnvVarSource,
     V1Job,
     V1JobTemplateSpec,
     V1KeyToPath,
+    V1ObjectMeta,
     V1OwnerReference,
+    V1Secret,
+    V1SecretKeySelector,
     V1Volume,
     V1VolumeMount,
 )
@@ -170,9 +175,49 @@ def add_job_ttl_seconds_after_finished(
     job.spec.ttl_seconds_after_finished = ttl_seconds_after_finished
 
 
+def extract_env_secret(job: Union[V1Job, V1JobTemplateSpec]):
+    """Extract all V1EnvVars into a Secret"""
+    meta = V1ObjectMeta(
+        name=job.metadata.name,
+        generate_name=job.metadata.generate_name,
+        labels=job.metadata.labels,
+    )
+    secret = V1Secret(metadata=meta, type="Opaque", data={})
+    for container in job.spec.template.spec.containers:
+        for i, env in enumerate(container.env or []):
+            if env.value is not None:
+                secret.data[env.name] = base64.b64encode(
+                    env.value.encode("utf8")
+                ).decode("ascii")
+                container.env[i] = V1EnvVar(
+                    name=env.name,
+                    value_from=V1EnvVarSource(
+                        secret_key_ref=V1SecretKeySelector(
+                            key=env.name,
+                            name=secret.metadata.generate_name,
+                        )
+                    ),
+                )
+    return secret
+
+
+def add_env_secret_name(job: Union[V1Job, V1JobTemplateSpec], secret: V1Secret):
+    """Apply the secret name to env secrets once they are known"""
+    generate_name = secret.metadata.generate_name
+    name = secret.metadata.name
+    for container in job.spec.template.spec.containers:
+        for i, env in enumerate(container.env or []):
+            if (
+                env.value_from
+                and env.value_from.secret_key_ref
+                and env.value_from.secret_key_ref.name == generate_name
+            ):
+                env.value_from.secret_key_ref.name = name
+
+
 def patch(
     job: Union[V1Job, V1JobTemplateSpec],
-    config_map: Optional[V1ConfigMap],
+    config_map: Optional[V1ConfigMap] = None,
     *,
     username: str,
     annotations: Optional[Dict[str, str]] = None,
@@ -186,7 +231,7 @@ def patch(
 
     * Adds `annotations` to the job
     * Adds `labels` to the job
-    * Sets the namespace of the job (and all containers) and ConfigMap to `namespacee`
+    * Sets the namespace of the job (and all containers) and ConfigMap to `namespace`
     * Adds the ConfigMap as a volume for the Job's container
     """
     annotations = annotations or {}
@@ -212,12 +257,12 @@ def add_submitted_configmap_name(
     job.spec.template.spec.volumes[-2].config_map.name = config_map.metadata.name
 
 
-def patch_configmap_owner(job: Union[V1Job, V1CronJob], config_map: V1ConfigMap):
+def patch_owner(job: Union[V1Job, V1CronJob], obj: V1ConfigMap | V1Secret):
     if job.metadata.name is None:
         raise ValueError("job must have a name before it can be set as an owner")
     assert job.metadata.name is not None
 
-    config_map.metadata.owner_references = [
+    obj.metadata.owner_references = [
         V1OwnerReference(
             api_version="batch/v1",
             kind=job.kind,
