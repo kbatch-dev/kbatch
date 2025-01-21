@@ -340,7 +340,11 @@ def duration(job) -> str:
     if job["status"]["succeeded"]:
         end_time = datetime.datetime.fromisoformat(job["status"]["completion_time"])
     elif job["status"]["failed"]:
-        end_time = datetime.datetime.fromisoformat(job["status"]["conditions"][0]["last_transition_time"])
+        end_time = None
+        for condition in job["status"]["conditions"]:
+            if condition["type"] == "Failed":
+                end_time = datetime.datetime.fromisoformat(condition["last_transition_time"])
+                break
     else:
         end_time = datetime.datetime.now(tz=datetime.timezone.utc)
 
