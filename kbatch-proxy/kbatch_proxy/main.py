@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 import os
@@ -17,6 +18,8 @@ from kubernetes.client.models import (
     V1CronJob,
     V1Job,
     V1JobTemplateSpec,
+    V1ObjectMeta,
+    V1ResourceQuota,
     V1Secret,
 )
 from pydantic import BaseModel
@@ -49,12 +52,20 @@ class Settings(BaseSettings):
     # A path to a YAML file defining the profiles
     kbatch_profile_file: Optional[str] = None
 
+    # A path to a YAML file defining a ResourceQuota
+    kbatch_resource_quota_file: Optional[str] = None
+
     # Jobs are cleaned up by Kubernetes after this many seconds.
     kbatch_job_ttl_seconds_after_finished: Optional[int] = 3600
     # Additional environment variables to set in the job environment
-    kbatch_job_extra_env: Optional[Dict[str, str]] = None
+    kbatch_job_extra_env: Dict[str, str] = {}
 
-    # Whether to automatically create new namespaces for a users
+    # Labels applied to kbatch-created resources
+    kbatch_labels: Dict[str, str] = {
+        "app.kubernetes.io/managed-by": "kbatch",
+    }
+
+    # Whether to automatically create new namespaces for all users
     kbatch_create_user_namespace: bool = True
 
     model_config = SettingsConfigDict(
@@ -112,6 +123,16 @@ if settings.kbatch_profile_file:
 else:
     profile_data = {}
 
+if settings.kbatch_resource_quota_file:
+    # TODO: we need some kind of validation on the keys / values here. Catch typos...
+    logger.info("loading resource quota from %s", settings.kbatch_resource_quota_file)
+    with open(settings.kbatch_resource_quota_file) as f:
+        resource_quota = utils.parse(yaml.safe_load(f), model=V1ResourceQuota)
+    if resource_quota.metadata.labels is None:
+        resource_quota.metadata.labels = {}
+    resource_quota.metadata.labels.update(settings.kbatch_labels)
+else:
+    resource_quota = None
 
 app = FastAPI()
 router = APIRouter(prefix=settings.kbatch_prefix)
@@ -323,8 +344,44 @@ if settings.kbatch_prefix:
         return {"message": "kbatch"}
 
 
-# -------
+# -----
 # utils
+
+
+def ensure_resource_quota(
+    api: kubernetes.client.CoreV1Api, namespace: str, resource_quota: V1ResourceQuota
+) -> None:
+    """
+    Apply a ResourceQuota to a namespace
+    """
+    existing_quota: V1ResourceQuota | None = None
+    name = resource_quota.metadata.name
+    try:
+        existing_quota = api.read_namespaced_resource_quota(name, namespace)
+    except kubernetes.client.ApiException as e:
+        if e.status == 404:
+            logger.debug("No such ResourceQuota %s/%s", namespace, name)
+        else:
+            raise
+
+    if existing_quota is None:
+        try:
+            api.create_namespaced_resource_quota(namespace, resource_quota)
+        except kubernetes.client.ApiException as e:
+            if e.status == 409:
+                logger.debug("Already created ResourceQuota %s/%s", namespace, name)
+                return
+            else:
+                raise
+        else:
+            logger.info("Created ResourceQuota %s/%s", namespace, name)
+    else:
+        if resource_quota.spec == existing_quota.spec:
+            logger.debug("ResourceQuota %s/%s unchanged", namespace, name)
+        else:
+            # this could fail if labels change...
+            api.patch_namespaced_resource_quota(name, namespace, resource_quota)
+            logger.info("Updated ResourceQuota %s/%s", namespace, name)
 
 
 def ensure_namespace(api: kubernetes.client.CoreV1Api, namespace: str):
@@ -338,7 +395,10 @@ def ensure_namespace(api: kubernetes.client.CoreV1Api, namespace: str):
     try:
         api.create_namespace(
             body=kubernetes.client.V1Namespace(
-                metadata=kubernetes.client.V1ObjectMeta(name=namespace)
+                metadata=V1ObjectMeta(
+                    name=namespace,
+                    labels=settings.kbatch_labels,
+                )
             )
         )
     except kubernetes.client.ApiException as e:
@@ -402,7 +462,7 @@ def _create_job(
         job_to_patch,
         config_map=config_map,
         annotations={},
-        labels={},
+        labels=settings.kbatch_labels,
         username=user.name,
         ttl_seconds_after_finished=settings.kbatch_job_ttl_seconds_after_finished,
         extra_env=settings.kbatch_job_extra_env,
@@ -426,6 +486,13 @@ def _create_job(
         created = ensure_namespace(api, user.namespace)
         if created:
             logger.info("Created namespace %s", user.namespace)
+
+    if resource_quota:
+        logger.info("Applying resource quota to namespace %s", user.namespace)
+        # force name to match namespace so it's stable and predictable
+        user_quota = copy.deepcopy(resource_quota)
+        user_quota.metadata.name = user.namespace
+        ensure_resource_quota(api, user.namespace, resource_quota)
 
     logger.info("Submitting Secret")
     env_secret = api.create_namespaced_secret(namespace=user.namespace, body=env_secret)
