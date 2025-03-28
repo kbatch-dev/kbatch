@@ -1,4 +1,3 @@
-import copy
 import json
 import logging
 import os
@@ -19,9 +18,9 @@ from kubernetes.client.models import (
     V1Job,
     V1JobTemplateSpec,
     V1ObjectMeta,
-    V1ResourceQuota,
     V1Secret,
 )
+from kubernetes.utils import create_from_dict  # type:ignore
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -52,8 +51,10 @@ class Settings(BaseSettings):
     # A path to a YAML file defining the profiles
     kbatch_profile_file: Optional[str] = None
 
-    # A path to a YAML file defining a ResourceQuota
-    kbatch_resource_quota_file: Optional[str] = None
+    # A path to a YAML file defining manifests to create
+    # via server-side apply when creating a namespace
+    # this is reapplied on _every_ job submission
+    kbatch_namespace_manifests_file: Optional[str] = None
 
     # Jobs are cleaned up by Kubernetes after this many seconds.
     kbatch_job_ttl_seconds_after_finished: Optional[int] = 3600
@@ -123,16 +124,28 @@ if settings.kbatch_profile_file:
 else:
     profile_data = {}
 
-if settings.kbatch_resource_quota_file:
+namespace_manifests = []
+if settings.kbatch_namespace_manifests_file:
     # TODO: we need some kind of validation on the keys / values here. Catch typos...
-    logger.info("loading resource quota from %s", settings.kbatch_resource_quota_file)
-    with open(settings.kbatch_resource_quota_file) as f:
-        resource_quota = utils.parse(yaml.safe_load(f), model=V1ResourceQuota)
-    if resource_quota.metadata.labels is None:
-        resource_quota.metadata.labels = {}
-    resource_quota.metadata.labels.update(settings.kbatch_labels)
-else:
-    resource_quota = None
+    logger.info(
+        "loading namespace manifests from %s", settings.kbatch_namespace_manifests_file
+    )
+    with open(settings.kbatch_namespace_manifests_file) as f:
+        namespace_manifests = [
+            manifest
+            for manifest in yaml.safe_load_all(f)
+            if manifest  # exclude None, e.g. for trailing `---`
+        ]
+    for manifest in namespace_manifests:
+        logger.info(
+            "Loaded manifest %s/%s: %s",
+            manifest["apiVersion"],
+            manifest["kind"],
+            manifest["metadata"]["name"],
+        )
+        # apply common labels
+        labels = manifest["metadata"].setdefault("labels", {})
+        labels.update(settings.kbatch_labels)
 
 app = FastAPI()
 router = APIRouter(prefix=settings.kbatch_prefix)
@@ -347,41 +360,43 @@ if settings.kbatch_prefix:
 # -----
 # utils
 
+# record which namespaces have had the manifests applied
+_manifests_applied: set[str] = set()
 
-def ensure_resource_quota(
-    api: kubernetes.client.CoreV1Api, namespace: str, resource_quota: V1ResourceQuota
+
+def apply_namespace_manifests(
+    api: kubernetes.client.ApiClient, namespace: str, mainfests: list[dict]
 ) -> None:
     """
-    Apply a ResourceQuota to a namespace
-    """
-    existing_quota: V1ResourceQuota | None = None
-    name = resource_quota.metadata.name
-    try:
-        existing_quota = api.read_namespaced_resource_quota(name, namespace)
-    except kubernetes.client.ApiException as e:
-        if e.status == 404:
-            logger.debug("No such ResourceQuota %s/%s", namespace, name)
-        else:
-            raise
+    Apply arbitrary manifests  when creating namespaces
 
-    if existing_quota is None:
-        try:
-            api.create_namespaced_resource_quota(namespace, resource_quota)
-        except kubernetes.client.ApiException as e:
-            if e.status == 409:
-                logger.debug("Already created ResourceQuota %s/%s", namespace, name)
-                return
-            else:
-                raise
-        else:
-            logger.info("Created ResourceQuota %s/%s", namespace, name)
-    else:
-        if resource_quota.spec == existing_quota.spec:
-            logger.debug("ResourceQuota %s/%s unchanged", namespace, name)
-        else:
-            # this could fail if labels change...
-            api.patch_namespaced_resource_quota(name, namespace, resource_quota)
-            logger.info("Updated ResourceQuota %s/%s", namespace, name)
+    For example, allows creating ResourceQuotas, NetworkPolicies, etc.
+    """
+    if namespace in _manifests_applied:
+        logger.debug("Already applied manifests to %s", namespace)
+        return
+    logger.info(
+        "Applying %i manifest%s to %s",
+        len(namespace_manifests),
+        "s" if len(namespace_manifests) != 1 else "",
+        namespace,
+    )
+    for manifest in namespace_manifests:
+        logger.info(
+            "Applying %s/%s %s/%s",
+            manifest["apiVersion"],
+            manifest["kind"],
+            namespace,
+            manifest["metadata"]["name"],
+        )
+        create_from_dict(api, manifest, namespace=namespace, apply=True)
+
+    # can we record this in an annotation on the namespace, instead?
+    # A generation number perhaps?
+    # in a typical deployment, HOSTNAME=kbatch-proxy-{rs.hash}-{pod.hash}
+    # rs.hash should uniquely identify a deployment generation
+    # for now, use once per kbatch-proxy process lifetime
+    _manifests_applied.add(namespace)
 
 
 def ensure_namespace(api: kubernetes.client.CoreV1Api, namespace: str):
@@ -487,12 +502,8 @@ def _create_job(
         if created:
             logger.info("Created namespace %s", user.namespace)
 
-    if resource_quota:
-        logger.info("Applying resource quota to namespace %s", user.namespace)
-        # force name to match namespace so it's stable and predictable
-        user_quota = copy.deepcopy(resource_quota)
-        user_quota.metadata.name = user.namespace
-        ensure_resource_quota(api, user.namespace, resource_quota)
+    if namespace_manifests:
+        apply_namespace_manifests(api.api_client, user.namespace, namespace_manifests)
 
     logger.info("Submitting Secret")
     env_secret = api.create_namespaced_secret(namespace=user.namespace, body=env_secret)

@@ -66,6 +66,43 @@ kbatch-proxy:
                               - user
 ```
 
+## Namespace customization
 
+```{versionadded} 0.5
+```
+
+The `kbatch_namespace_manifests_file` setting can point to a yaml file containing any number of kubernetes manifests to create within a given kbatch namespace.
+This allows creation of ResourceQuotas, NetworkPolicies, and other per-namespace resources you might want to have in every user namespace.
+The manifests are created using kubernetes [server-side apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/).
+
+For example, the resource quota:
+
+```yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: mem-cpu-demo
+spec:
+  hard:
+    count.pods: "10"
+    requests.cpu: "5"
+    requests.memory: 5Gi
+    limits.cpu: "20"
+    limits.memory: 20Gi
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  - Ingress
+```
+
+would limit the number of pods in _each_ kbatch namespace to 10,
+limit resource requests and limits, and deny _all_ network traffic into and out of the namespace.
+so jobs would not have permission to access the network.
 
 [jhub-service]: https://z2jh.jupyter.org/en/latest/administrator/services.html
