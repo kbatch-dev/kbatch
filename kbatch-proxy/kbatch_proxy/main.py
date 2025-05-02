@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from functools import partial
+from functools import cached_property, partial
 from typing import Dict, List, Optional, Tuple, Union
 
 import jupyterhub.services.auth
@@ -74,6 +74,71 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
     )
 
+    # derivative fields
+    # these are cached, only loaded once
+
+    @cached_property
+    def auth(self) -> jupyterhub.services.auth.HubAuth:
+        return jupyterhub.services.auth.HubAuth(
+            api_token=self.jupyterhub_api_token,
+            cache_max_age=60,
+        )
+
+    @cached_property
+    def job_template(self) -> dict | None:
+        """Load kbatch_job_template_file"""
+        if self.kbatch_job_template_file:
+            logger.info("loading job template from %s", self.kbatch_job_template_file)
+            with open(self.kbatch_job_template_file) as f:
+                job_template = yaml.safe_load(f)
+
+            # parse with Kubernetes to normalize keys with job_data
+            job_template = utils.parse(job_template, model=V1Job).to_dict()
+            utils.remove_nulls(job_template)
+        else:
+            job_template = None
+        return job_template
+
+    @cached_property
+    def profile_data(self) -> dict:
+        """Load kbatch_profile_file"""
+        if self.kbatch_profile_file:
+            # TODO: we need some kind of validation on the keys / values here. Catch typos...
+            logger.info("loading profiles from %s", self.kbatch_profile_file)
+            with open(self.kbatch_profile_file) as f:
+                profile_data = yaml.safe_load(f)
+        else:
+            profile_data = {}
+        return profile_data
+
+    @cached_property
+    def namespace_manifests(self) -> list[dict]:
+        """Load kbatch_namespace_manifests_file"""
+        if not self.kbatch_namespace_manifests_file:
+            return []
+
+        # TODO: we need some kind of validation on the keys / values here. Catch typos...
+        logger.info(
+            "loading namespace manifests from %s", self.kbatch_namespace_manifests_file
+        )
+        with open(self.kbatch_namespace_manifests_file) as f:
+            namespace_manifests = [
+                manifest
+                for manifest in yaml.safe_load_all(f)
+                if manifest  # exclude None, e.g. for trailing `---`
+            ]
+        for manifest in namespace_manifests:
+            logger.info(
+                "Loaded manifest %s/%s: %s",
+                manifest["apiVersion"],
+                manifest["kind"],
+                manifest["metadata"]["name"],
+            )
+            # apply common labels
+            labels = manifest["metadata"].setdefault("labels", {})
+            labels.update(self.kbatch_labels)
+        return namespace_manifests
+
 
 class User(BaseModel):
     name: str
@@ -92,6 +157,7 @@ class UserOut(BaseModel):
 
 
 settings = Settings()
+
 if settings.kbatch_init_logging:
     import rich.logging
 
@@ -103,49 +169,6 @@ if settings.kbatch_init_logging:
     )
     logger.addHandler(handler)
 
-if settings.kbatch_job_template_file:
-    logger.info("loading job template from %s", settings.kbatch_job_template_file)
-    with open(settings.kbatch_job_template_file) as f:
-        job_template = yaml.safe_load(f)
-
-    # parse with Kubernetes to normalize keys with job_data
-    job_template = utils.parse(job_template, model=V1Job).to_dict()
-    utils.remove_nulls(job_template)
-
-else:
-    job_template = None
-
-
-if settings.kbatch_profile_file:
-    # TODO: we need some kind of validation on the keys / values here. Catch typos...
-    logger.info("loading profiles from %s", settings.kbatch_profile_file)
-    with open(settings.kbatch_profile_file) as f:
-        profile_data = yaml.safe_load(f)
-else:
-    profile_data = {}
-
-namespace_manifests = []
-if settings.kbatch_namespace_manifests_file:
-    # TODO: we need some kind of validation on the keys / values here. Catch typos...
-    logger.info(
-        "loading namespace manifests from %s", settings.kbatch_namespace_manifests_file
-    )
-    with open(settings.kbatch_namespace_manifests_file) as f:
-        namespace_manifests = [
-            manifest
-            for manifest in yaml.safe_load_all(f)
-            if manifest  # exclude None, e.g. for trailing `---`
-        ]
-    for manifest in namespace_manifests:
-        logger.info(
-            "Loaded manifest %s/%s: %s",
-            manifest["apiVersion"],
-            manifest["kind"],
-            manifest["metadata"]["name"],
-        )
-        # apply common labels
-        labels = manifest["metadata"].setdefault("labels", {})
-        labels.update(settings.kbatch_labels)
 
 app = FastAPI()
 router = APIRouter(prefix=settings.kbatch_prefix)
@@ -155,13 +178,9 @@ router = APIRouter(prefix=settings.kbatch_prefix)
 # JupyterHub configuration
 # TODO: make auth pluggable
 
-auth = jupyterhub.services.auth.HubAuth(
-    api_token=settings.jupyterhub_api_token,
-    cache_max_age=60,
-)
-
 
 async def get_current_user(request: Request) -> User:
+    auth = settings.auth
     if not auth.access_scopes:
         raise RuntimeError(
             "JupyterHub OAuth scopes for access to kbatch not defined. "
@@ -333,7 +352,7 @@ async def pod_logs(
 
 @router.get("/profiles/")
 async def profiles():
-    return profile_data
+    return settings.profile_data
 
 
 @router.get("/")
@@ -372,6 +391,7 @@ def apply_namespace_manifests(
 
     For example, allows creating ResourceQuotas, NetworkPolicies, etc.
     """
+    namespace_manifests = settings.namespace_manifests
     if namespace in _manifests_applied:
         logger.debug("Already applied manifests to %s", namespace)
         return
@@ -450,6 +470,7 @@ def _create_job(
     job_data = data["job"]
 
     # does it handle cronjob job specs appropriately?
+    job_template = settings.job_template
     if job_template:
         job_data = utils.merge_json_objects(job_data, job_template)
 
@@ -502,8 +523,10 @@ def _create_job(
         if created:
             logger.info("Created namespace %s", user.namespace)
 
-    if namespace_manifests:
-        apply_namespace_manifests(api.api_client, user.namespace, namespace_manifests)
+    if settings.namespace_manifests:
+        apply_namespace_manifests(
+            api.api_client, user.namespace, settings.namespace_manifests
+        )
 
     logger.info("Submitting Secret")
     env_secret = api.create_namespaced_secret(namespace=user.namespace, body=env_secret)

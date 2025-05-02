@@ -24,6 +24,8 @@ def runner():
         # always write stderr on error so it shows up in captured test output
         if result.exit_code:
             sys.stderr.write(result.stderr)
+            if result.exception and isinstance(result.exception, Exception):
+                raise result.exception
         return result
 
     runner.invoke = _wrapped_invoke
