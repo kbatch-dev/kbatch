@@ -81,22 +81,16 @@ def _make_job_spec(
         name="job",
         env=env_vars,
         # volume_mounts=[file_volume_mount],
-        resources=V1ResourceRequirements(),
         # TODO: this is important. validate it!
         working_dir="/code",
     )
 
     resources = profile.get("resources", {})
-    limits = resources.get("limits", {})
-    requests = resources.get("requests", {})
-
-    container.resources.requests = {}
-    container.resources.limits = {}
-
-    if requests:
-        container.resources.requests.update(requests)
-    if limits:
-        container.resources.limits.update(limits)
+    if resources:
+        container.resources = V1ResourceRequirements()
+        for key in ("limits", "requests"):
+            if key in resources:
+                setattr(container.resources, key, dict(resources[key]))
 
     pod_metadata = V1ObjectMeta(
         name=f"{name}-pod",

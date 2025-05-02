@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -6,6 +7,8 @@ from kubernetes.config import list_kube_config_contexts
 
 # make sure this happens before kbatch_proxy.main is imported
 os.environ["kbatch_init_logging"] = "0"
+
+integration_tests = Path(__file__).parent.resolve()
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -27,8 +30,25 @@ def check_cluster():
 
 
 @pytest.fixture(autouse=True)
-def mock_hub_auth(mocker):
-    def side_effect(token):
+def kbatch_proxy_settings(mocker):
+    """apply kbatch_proxy settings"""
+    # make sure this happens before kbatch_proxy.main is imported
+    mocker.patch.dict(
+        os.environ,
+        {
+            "kbatch_init_logging": "0",
+            "JUPYTERHUB_SERVICE_NAME": "kbatch",
+        },
+    )
+    import kbatch_proxy.main
+
+    kbatch_proxy.main.settings = settings = kbatch_proxy.main.Settings(
+        kbatch_namespace_manifests_file=str(
+            integration_tests / "data" / "namespace-manifests.yaml"
+        ),
+    )
+
+    def mock_auth(token):
         if token == "abc":
             return {
                 "name": "testuser",
@@ -44,19 +64,11 @@ def mock_hub_auth(mocker):
         else:
             return None
 
-    # env patch must be before module patch to avoid logging setup
-    mocker.patch.dict(
-        os.environ,
-        {
-            "kbatch_init_logging": "0",
-            "JUPYTERHUB_SERVICE_NAME": "kbatch",
-        },
-    )
-    mocker.patch("kbatch_proxy.main.auth.user_for_token", side_effect=side_effect)
+    mocker.patch.object(settings.auth, "user_for_token", mock_auth)
 
 
 @pytest.fixture
-def client(mock_hub_auth, mocker):
+def client(kbatch_proxy_settings, mocker):
     # import kbatch_proxy.main must be after mock_hub_auth
     from kbatch_proxy.main import app
 

@@ -314,7 +314,7 @@ def job_status(job):
     succeeded = status["succeeded"] or 0
     failed = status["failed"] or 0
     ready = status["ready"] or 0
-    active = status["active"] or 0
+    active = status["active"]
     if failed:
         return "[red]failed[/red]"
     elif ready:
@@ -325,8 +325,11 @@ def job_status(job):
         # succeeded last because in multi-pod cases
         # only report success when they _all_ succeed
         return "[green]done[/green]"
+    elif active is None:
+        # failure to create pods may leave active as None
+        return "pending"
     else:
-        raise ValueError()
+        raise ValueError(f"Unrecognized status: {status!r}")
 
 
 def pod_status(row):

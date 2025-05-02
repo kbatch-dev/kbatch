@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from functools import partial
+from functools import cached_property, partial
 from typing import Dict, List, Optional, Tuple, Union
 
 import jupyterhub.services.auth
@@ -17,8 +17,10 @@ from kubernetes.client.models import (
     V1CronJob,
     V1Job,
     V1JobTemplateSpec,
+    V1ObjectMeta,
     V1Secret,
 )
+from kubernetes.utils import create_from_dict  # type:ignore
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -49,18 +51,93 @@ class Settings(BaseSettings):
     # A path to a YAML file defining the profiles
     kbatch_profile_file: Optional[str] = None
 
+    # A path to a YAML file defining manifests to create
+    # via server-side apply when creating a namespace
+    # this is reapplied on _every_ job submission
+    kbatch_namespace_manifests_file: Optional[str] = None
+
     # Jobs are cleaned up by Kubernetes after this many seconds.
     kbatch_job_ttl_seconds_after_finished: Optional[int] = 3600
     # Additional environment variables to set in the job environment
-    kbatch_job_extra_env: Optional[Dict[str, str]] = None
+    kbatch_job_extra_env: Dict[str, str] = {}
 
-    # Whether to automatically create new namespaces for a users
+    # Labels applied to kbatch-created resources
+    kbatch_labels: Dict[str, str] = {
+        "app.kubernetes.io/managed-by": "kbatch",
+    }
+
+    # Whether to automatically create new namespaces for all users
     kbatch_create_user_namespace: bool = True
 
     model_config = SettingsConfigDict(
         env_file=os.environ.get("KBATCH_SETTINGS_PATH", ".env"),
         env_file_encoding="utf-8",
     )
+
+    # derivative fields
+    # these are cached, only loaded once
+
+    @cached_property
+    def auth(self) -> jupyterhub.services.auth.HubAuth:
+        return jupyterhub.services.auth.HubAuth(
+            api_token=self.jupyterhub_api_token,
+            cache_max_age=60,
+        )
+
+    @cached_property
+    def job_template(self) -> dict | None:
+        """Load kbatch_job_template_file"""
+        if self.kbatch_job_template_file:
+            logger.info("loading job template from %s", self.kbatch_job_template_file)
+            with open(self.kbatch_job_template_file) as f:
+                job_template = yaml.safe_load(f)
+
+            # parse with Kubernetes to normalize keys with job_data
+            job_template = utils.parse(job_template, model=V1Job).to_dict()
+            utils.remove_nulls(job_template)
+        else:
+            job_template = None
+        return job_template
+
+    @cached_property
+    def profile_data(self) -> dict:
+        """Load kbatch_profile_file"""
+        if self.kbatch_profile_file:
+            # TODO: we need some kind of validation on the keys / values here. Catch typos...
+            logger.info("loading profiles from %s", self.kbatch_profile_file)
+            with open(self.kbatch_profile_file) as f:
+                profile_data = yaml.safe_load(f)
+        else:
+            profile_data = {}
+        return profile_data
+
+    @cached_property
+    def namespace_manifests(self) -> list[dict]:
+        """Load kbatch_namespace_manifests_file"""
+        if not self.kbatch_namespace_manifests_file:
+            return []
+
+        # TODO: we need some kind of validation on the keys / values here. Catch typos...
+        logger.info(
+            "loading namespace manifests from %s", self.kbatch_namespace_manifests_file
+        )
+        with open(self.kbatch_namespace_manifests_file) as f:
+            namespace_manifests = [
+                manifest
+                for manifest in yaml.safe_load_all(f)
+                if manifest  # exclude None, e.g. for trailing `---`
+            ]
+        for manifest in namespace_manifests:
+            logger.info(
+                "Loaded manifest %s/%s: %s",
+                manifest["apiVersion"],
+                manifest["kind"],
+                manifest["metadata"]["name"],
+            )
+            # apply common labels
+            labels = manifest["metadata"].setdefault("labels", {})
+            labels.update(self.kbatch_labels)
+        return namespace_manifests
 
 
 class User(BaseModel):
@@ -80,6 +157,7 @@ class UserOut(BaseModel):
 
 
 settings = Settings()
+
 if settings.kbatch_init_logging:
     import rich.logging
 
@@ -91,27 +169,6 @@ if settings.kbatch_init_logging:
     )
     logger.addHandler(handler)
 
-if settings.kbatch_job_template_file:
-    logger.info("loading job template from %s", settings.kbatch_job_template_file)
-    with open(settings.kbatch_job_template_file) as f:
-        job_template = yaml.safe_load(f)
-
-    # parse with Kubernetes to normalize keys with job_data
-    job_template = utils.parse(job_template, model=V1Job).to_dict()
-    utils.remove_nulls(job_template)
-
-else:
-    job_template = None
-
-
-if settings.kbatch_profile_file:
-    # TODO: we need some kind of validation on the keys / values here. Catch typos...
-    logger.info("loading profiles from %s", settings.kbatch_profile_file)
-    with open(settings.kbatch_profile_file) as f:
-        profile_data = yaml.safe_load(f)
-else:
-    profile_data = {}
-
 
 app = FastAPI()
 router = APIRouter(prefix=settings.kbatch_prefix)
@@ -121,13 +178,9 @@ router = APIRouter(prefix=settings.kbatch_prefix)
 # JupyterHub configuration
 # TODO: make auth pluggable
 
-auth = jupyterhub.services.auth.HubAuth(
-    api_token=settings.jupyterhub_api_token,
-    cache_max_age=60,
-)
-
 
 async def get_current_user(request: Request) -> User:
+    auth = settings.auth
     if not auth.access_scopes:
         raise RuntimeError(
             "JupyterHub OAuth scopes for access to kbatch not defined. "
@@ -299,7 +352,7 @@ async def pod_logs(
 
 @router.get("/profiles/")
 async def profiles():
-    return profile_data
+    return settings.profile_data
 
 
 @router.get("/")
@@ -323,8 +376,47 @@ if settings.kbatch_prefix:
         return {"message": "kbatch"}
 
 
-# -------
+# -----
 # utils
+
+# record which namespaces have had the manifests applied
+_manifests_applied: set[str] = set()
+
+
+def apply_namespace_manifests(
+    api: kubernetes.client.ApiClient, namespace: str, mainfests: list[dict]
+) -> None:
+    """
+    Apply arbitrary manifests  when creating namespaces
+
+    For example, allows creating ResourceQuotas, NetworkPolicies, etc.
+    """
+    namespace_manifests = settings.namespace_manifests
+    if namespace in _manifests_applied:
+        logger.debug("Already applied manifests to %s", namespace)
+        return
+    logger.info(
+        "Applying %i manifest%s to %s",
+        len(namespace_manifests),
+        "s" if len(namespace_manifests) != 1 else "",
+        namespace,
+    )
+    for manifest in namespace_manifests:
+        logger.info(
+            "Applying %s/%s %s/%s",
+            manifest["apiVersion"],
+            manifest["kind"],
+            namespace,
+            manifest["metadata"]["name"],
+        )
+        create_from_dict(api, manifest, namespace=namespace, apply=True)
+
+    # can we record this in an annotation on the namespace, instead?
+    # A generation number perhaps?
+    # in a typical deployment, HOSTNAME=kbatch-proxy-{rs.hash}-{pod.hash}
+    # rs.hash should uniquely identify a deployment generation
+    # for now, use once per kbatch-proxy process lifetime
+    _manifests_applied.add(namespace)
 
 
 def ensure_namespace(api: kubernetes.client.CoreV1Api, namespace: str):
@@ -338,7 +430,10 @@ def ensure_namespace(api: kubernetes.client.CoreV1Api, namespace: str):
     try:
         api.create_namespace(
             body=kubernetes.client.V1Namespace(
-                metadata=kubernetes.client.V1ObjectMeta(name=namespace)
+                metadata=V1ObjectMeta(
+                    name=namespace,
+                    labels=settings.kbatch_labels,
+                )
             )
         )
     except kubernetes.client.ApiException as e:
@@ -375,6 +470,7 @@ def _create_job(
     job_data = data["job"]
 
     # does it handle cronjob job specs appropriately?
+    job_template = settings.job_template
     if job_template:
         job_data = utils.merge_json_objects(job_data, job_template)
 
@@ -402,7 +498,7 @@ def _create_job(
         job_to_patch,
         config_map=config_map,
         annotations={},
-        labels={},
+        labels=settings.kbatch_labels,
         username=user.name,
         ttl_seconds_after_finished=settings.kbatch_job_ttl_seconds_after_finished,
         extra_env=settings.kbatch_job_extra_env,
@@ -426,6 +522,11 @@ def _create_job(
         created = ensure_namespace(api, user.namespace)
         if created:
             logger.info("Created namespace %s", user.namespace)
+
+    if settings.namespace_manifests:
+        apply_namespace_manifests(
+            api.api_client, user.namespace, settings.namespace_manifests
+        )
 
     logger.info("Submitting Secret")
     env_secret = api.create_namespaced_secret(namespace=user.namespace, body=env_secret)

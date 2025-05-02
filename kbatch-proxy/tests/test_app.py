@@ -30,7 +30,9 @@ def mock_hub_auth(mocker):
         else:
             return None
 
-    mocker.patch("kbatch_proxy.main.auth.user_for_token", side_effect=side_effect)
+    mocker.patch(
+        "kbatch_proxy.main.settings.auth.user_for_token", side_effect=side_effect
+    )
     mocker.patch.dict(os.environ, {"JUPYTERHUB_SERVICE_NAME": "kbatch"})
 
 
