@@ -88,8 +88,9 @@ def _make_job_spec(
     resources = profile.get("resources", {})
     if resources:
         container.resources = V1ResourceRequirements()
-        for key in ("limits", "requirements"):
-            container.resources[key] = dict(resources[key])
+        for key in ("limits", "requests"):
+            if key in resources:
+                setattr(container.resources, key, dict(resources[key]))
 
     pod_metadata = V1ObjectMeta(
         name=f"{name}-pod",
