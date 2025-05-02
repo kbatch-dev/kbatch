@@ -67,36 +67,6 @@ def kbatch_proxy_settings(mocker):
     mocker.patch.object(settings.auth, "user_for_token", mock_auth)
 
 
-#
-# @pytest.fixture(autouse=True)
-# def mock_hub_auth(mocker):
-#     def side_effect(token):
-#         if token == "abc":
-#             return {
-#                 "name": "testuser",
-#                 "groups": ["testgroup"],
-#                 "scopes": ["access:services"],
-#             }
-#         elif token == "def":
-#             return {
-#                 "name": "testuser2",
-#                 "groups": [],
-#                 "scopes": ["access:servers!user=testuser2"],
-#             }
-#         else:
-#             return None
-#
-#     # env patch must be before module patch to avoid logging setup
-#     mocker.patch.dict(
-#         os.environ,
-#         {
-#             "kbatch_init_logging": "0",
-#             "JUPYTERHUB_SERVICE_NAME": "kbatch",
-#         },
-#     )
-#     mocker.patch("kbatch_proxy.main.settings.auth.user_for_token", side_effect=side_effect)
-
-
 @pytest.fixture
 def client(kbatch_proxy_settings, mocker):
     # import kbatch_proxy.main must be after mock_hub_auth
