@@ -20,7 +20,7 @@ from kubernetes.client.models import (
     V1ObjectMeta,
     V1Secret,
 )
-from kubernetes.utils import create_from_dict  # type:ignore
+from kubernetes.utils import create_from_dict  # type: ignore
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
